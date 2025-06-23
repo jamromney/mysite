@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>My Homelab</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        nav {
+            margin-top: 10px;
+        }
+
+        nav a {
+            color: #fff;
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        section {
+            padding: 20px;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1 1 250px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            margin-top: 40px;
+        }
+
+        .cta {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+
+        .cta:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>My Homelab</h1>
+        <nav>
+            <a href="#about">About</a>
+            <a href="#features">Features</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <section id="about">
+        <h2>Welcome to My Homelab</h2>
+        <p>Discover my personal environment for learning, testing, and experimenting with cutting-edge technology. My homelab is the perfect space to build, explore, and innovate in a self-contained setup.</p>
+        <a class="cta" href="#contact">Get in Touch</a>
+    </section>
+
+    <section id="features">
+        <h2>Key Features</h2>
+        <div class="features">
+            <div class="card">
+                <h3>Virtualization</h3>
+                <p>Run multiple virtual machines with various operating systems using VMware, Proxmox, or VirtualBox.</p>
+            </div>
+            <div class="card">
+                <h3>Network Labs</h3>
+                <p>Set up complex network topologies, test routing, firewall configurations, and security protocols.</p>
+            </div>
+            <div class="card">
+                <h3>Storage Solutions</h3>
+                <p>Implement NAS, SAN, or local storage to manage data efficiently and reliably.</p>
+            </div>
+            <div class="card">
+                <h3>Automation</h3>
+                <p>Automate deployments and routines with scripts, Ansible, or Kubernetes to streamline operations.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact">
+        <h2>Contact Me</h2>
+        <p>If you'd like to know more or collaborate, reach out:</p>
+        <ul>
+            <li>Email: myhomelab@example.com</li>
+            <li>Twitter: @MyHomelab</li>
+            <li>GitHub: github.com/myhomelab</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 My Homelab</p>
+    </footer>
+</body>
+</html>
