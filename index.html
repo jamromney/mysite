@@ -4,59 +4,122 @@
 <meta charset="UTF-8">
 <title>3D Bike Game</title>
 <style>
-  body { margin:0; overflow:hidden; font-family:sans-serif; background:#222; color:#fff; }
-  .screen { display:none; position:absolute; top:0; left:0; width:100%; height:100%; justify-content:center; align-items:center; flex-direction:column; background:rgba(0,0,0,0.8); }
+  body { margin:0; font-family:sans-serif; overflow:hidden; background:#111; color:white; }
+  .screen { display:none; width:100vw; height:100vh; justify-content:center; align-items:center; flex-direction:column; }
   .screen.active { display:flex; }
-  button { padding:10px 20px; margin:5px; font-size:16px; cursor:pointer; }
-  #stats, #timer { position:absolute; top:10px; left:10px; font-size:18px; }
+  .menu { display:flex; gap:20px; }
+  .card { width:150px; height:100px; background:#333; display:flex; justify-content:center; align-items:center; cursor:pointer; border:2px solid white; transition:0.2s; }
+  .card:hover { border-color:#ff0; }
+  button { padding:10px 20px; margin:10px; cursor:pointer; }
+  #gameUI { position:absolute; top:0; left:0; color:white; padding:10px; z-index:10; }
+  #stats,#timer { font-size:16px; margin:5px; }
+  #messageScreen { position:absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-size:24px; z-index:20; }
 </style>
 </head>
 <body>
-<!-- Screens -->
+
+<!-- Start Screen -->
 <div id="startScreen" class="screen active">
   <h1>3D Bike Game</h1>
-  <button onclick="showScreen('bikeScreen')">Start</button>
+  <button id="startBtn">Start</button>
 </div>
 
+<!-- Bike Selection -->
 <div id="bikeScreen" class="screen">
-  <h2>Select Bike</h2>
-  <button onclick="selectBike('white')">Bike 1</button>
-  <button onclick="selectBike('red')">Bike 2</button>
-  <button onclick="backTo('startScreen')">Back</button>
+  <h2>Select Your Bike</h2>
+  <div class="menu">
+    <div class="card" data-bike="bike1">Bike 1</div>
+    <div class="card" data-bike="bike2">Bike 2</div>
+    <div class="card" data-bike="bike3">Bike 3</div>
+  </div>
+  <button class="backBtn">Back</button>
 </div>
 
+<!-- Map Selection -->
 <div id="mapScreen" class="screen">
   <h2>Select Map</h2>
-  <button onclick="selectMap(0)">Map 1</button>
-  <button onclick="selectMap(1)">Map 2</button>
-  <button onclick="selectMap(2)">Map 3</button>
-  <button onclick="backTo('bikeScreen')">Back</button>
+  <div class="menu">
+    <div class="card" data-map="map1" style="background:green">Map 1</div>
+    <div class="card" data-map="map2" style="background:blue">Map 2</div>
+    <div class="card" data-map="map3" style="background:black">Map 3</div>
+  </div>
+  <button class="backBtn">Back</button>
 </div>
 
+<!-- Level Selection -->
 <div id="levelScreen" class="screen">
   <h2>Select Level</h2>
-  <div id="levelButtons"></div>
-  <button onclick="backTo('mapScreen')">Back</button>
+  <div class="menu">
+    <div class="card" data-level="easy" style="background:green">Easy</div>
+    <div class="card" data-level="easy2" style="background:green">Easy2</div>
+    <div class="card" data-level="medium" style="background:blue">Medium</div>
+    <div class="card" data-level="medium2" style="background:blue">Medium2</div>
+    <div class="card" data-level="hard" style="background:black">Hard</div>
+    <div class="card" data-level="hard2" style="background:black">Hard2</div>
+  </div>
+  <button class="backBtn">Back</button>
 </div>
 
-<div id="messageScreen" class="screen">
+<!-- Message Screen -->
+<div id="messageScreen">
   <h2 id="messageTitle"></h2>
   <p id="messageText"></p>
-  <button onclick="restartGame()">Retry</button>
-  <button onclick="backTo('levelScreen')">Back</button>
+  <button id="retryBtn">Retry</button>
 </div>
 
+<!-- Game Stats -->
 <div id="gameUI">
-  <div id="stats"></div>
-  <div id="timer"></div>
+  <div id="stats">Distance: 0m</div>
+  <div id="timer">Time: 0s</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.154/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.154/examples/js/controls/PointerLockControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 <script>
+// -------------------- SCREENS --------------------
+const startScreen = document.getElementById('startScreen');
+const bikeScreen = document.getElementById('bikeScreen');
+const mapScreen = document.getElementById('mapScreen');
+const levelScreen = document.getElementById('levelScreen');
+const messageScreen = document.getElementById('messageScreen');
+const retryBtn = document.getElementById('retryBtn');
+
+let selectedBike, selectedMap, selectedLevel;
+document.getElementById('startBtn').onclick = () => showScreen('bikeScreen');
+
+function showScreen(screenId){
+  startScreen.classList.remove('active');
+  bikeScreen.classList.remove('active');
+  mapScreen.classList.remove('active');
+  levelScreen.classList.remove('active');
+  messageScreen.style.display = 'none';
+  if(screenId==='startScreen') startScreen.classList.add('active');
+  if(screenId==='bikeScreen') bikeScreen.classList.add('active');
+  if(screenId==='mapScreen') mapScreen.classList.add('active');
+  if(screenId==='levelScreen') levelScreen.classList.add('active');
+  if(screenId==='gameUI') document.getElementById('gameUI').style.display='block';
+}
+
+bikeScreen.querySelectorAll('.card').forEach(c=>{
+  c.onclick = ()=>{ selectedBike=c.dataset.bike; showScreen('mapScreen'); }
+});
+mapScreen.querySelectorAll('.card').forEach(c=>{
+  c.onclick = ()=>{ selectedMap=c.dataset.map; showScreen('levelScreen'); }
+});
+levelScreen.querySelectorAll('.card').forEach(c=>{
+  c.onclick = ()=>{
+    selectedLevel=c.dataset.level;
+    initThree(); spawnTrail(); spawnObstacles(); showScreen('gameUI'); animate();
+  }
+});
+document.querySelectorAll('.backBtn').forEach(b=>{
+  b.onclick = ()=>showScreen('startScreen');
+});
+retryBtn.onclick = ()=>{ crashed=false; finished=false; player={x:0,y:1,z:0,vx:0,vy:0,rotY:0,rotVel:0,onGround:true,distance:0}; startTime=performance.now(); showScreen('gameUI'); };
+
+// -------------------- 3D GAME --------------------
 let scene, camera, renderer, controls;
-let player = {x:0, y:1, z:0, vx:0, vy:0, rotY:0, rotVel:0, onGround:true, distance:0};
-let bikeColor = 'white';
+let player = { x:0, y:1, z:0, vx:0, vy:0, rotY:0, rotVel:0, onGround:true, distance:0 };
 let keys = {};
 let clock = new THREE.Clock();
 let obstacles = [];
@@ -64,42 +127,17 @@ let trailMesh;
 let trailLength = 200;
 let crashed = false;
 let finished = false;
-let selectedMap = 0;
-let selectedTrail = { difficulty:'green' };
 let startTime = performance.now();
 let speed = 12;
 
-// -------------------- GAME FLOW --------------------
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.getElementById('gameUI').style.display = (id==='messageScreen')?'none':'block';
-}
-
-function backTo(id){ showScreen(id); }
-function selectBike(color){ bikeColor=color; showScreen('mapScreen'); }
-function selectMap(map){ selectedMap=map; showLevels(); showScreen('levelScreen'); }
-function showLevels(){
-  const container = document.getElementById('levelButtons');
-  container.innerHTML='';
-  ['green','green','blue','blue','black','black'].forEach((diff,i)=>{
-    const btn = document.createElement('button');
-    btn.textContent = `${diff.charAt(0).toUpperCase() + diff.slice(1)} Route ${i+1}`;
-    btn.onclick = ()=>{ selectedTrail.difficulty=diff; startGame(); };
-    container.appendChild(btn);
-  });
-}
-
-// -------------------- THREE.JS SETUP --------------------
 function initThree(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
-
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1500);
-  camera.position.set(player.x, player.y+1.5, player.z);
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight,0.1,1500);
+  camera.position.set(player.x,player.y+1.5,player.z);
 
   renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(window.innerWidth,window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
   const light = new THREE.DirectionalLight(0xffffff,1);
@@ -109,97 +147,67 @@ function initThree(){
 
   controls = new THREE.PointerLockControls(camera, renderer.domElement);
   scene.add(controls.getObject());
-  renderer.domElement.addEventListener('click', ()=>controls.lock());
+  renderer.domElement.addEventListener('click',()=>controls.lock());
 
-  document.addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='r'&&(crashed||finished)) restartGame(); });
-  document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
+  document.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='r'&&(crashed||finished)) restartGame(); });
+  document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 
-  window.addEventListener('resize', ()=>{
-    camera.aspect=window.innerWidth/window.innerHeight;
+  window.addEventListener('resize',()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth,window.innerHeight);
   });
 }
 
-// -------------------- TRAIL & OBSTACLES --------------------
 function spawnTrail(){
-  const colors={green:0x228B22,blue:0x1E90FF,black:0x000000};
-  const color = colors[selectedTrail.difficulty]||0x8B4513;
-  const geometry = new THREE.PlaneGeometry(6,trailLength,32,32);
-  const material = new THREE.MeshPhongMaterial({color});
-  trailMesh = new THREE.Mesh(geometry, material);
+  const colors = {green:0x228B22, blue:0x1E90FF, black:0x000000};
+  const color = colors['green']; // placeholder
+  const geometry = new THREE.PlaneGeometry(6, trailLength, 32,32);
+  const material = new THREE.MeshPhongMaterial({color:color});
+  trailMesh = new THREE.Mesh(geometry,material);
   trailMesh.rotation.x=-Math.PI/2;
   trailMesh.position.z=trailLength/2;
   scene.add(trailMesh);
-
-  const mountainGeom=new THREE.ConeGeometry(20,50,8);
-  const mountainMat=new THREE.MeshPhongMaterial({color:0x555555});
-  for(let i=0;i<5;i++){
-    const m=new THREE.Mesh(mountainGeom,mountainMat);
-    m.position.set(Math.random()*50-25,25,Math.random()*trailLength);
-    scene.add(m);
-  }
 }
 
 function spawnObstacles(){
   obstacles=[];
   for(let i=0;i<30;i++){
-    const type=['rock','log','bush'][Math.floor(Math.random()*3)];
-    let obj;
-    if(type==='rock') obj = new THREE.Mesh(new THREE.SphereGeometry(1+Math.random()*1.5,16,16), new THREE.MeshPhongMaterial({color:0x333333}));
-    else if(type==='log'){ obj=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,3,8),new THREE.MeshPhongMaterial({color:0x8B4513})); obj.rotation.z=Math.PI/2; }
-    else obj=new THREE.Mesh(new THREE.SphereGeometry(1+Math.random()*1.5,8,8),new THREE.MeshPhongMaterial({color:0x2d5016}));
+    const geom = new THREE.BoxGeometry(1,1,1);
+    const mat = new THREE.MeshPhongMaterial({color:0x8B4513});
+    const obj = new THREE.Mesh(geom,mat);
     obj.position.set(Math.random()*4-2,0.5,Math.random()*(trailLength-20)+20);
     scene.add(obj);
     obstacles.push(obj);
   }
 }
 
-// -------------------- BIKE --------------------
-let bikeMesh;
-function spawnBike(){
-  if(bikeMesh) scene.remove(bikeMesh);
-  bikeMesh = new THREE.Mesh(new THREE.BoxGeometry(1,0.5,2), new THREE.MeshPhongMaterial({color:bikeColor}));
-  scene.add(bikeMesh);
-}
-
-// -------------------- GAME LOOP --------------------
 function animate(){
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
-
-  if(!crashed && !finished){
+  if(!crashed&&!finished){
     handleControls(dt);
-    camera.position.set(player.x, player.y+1.5, player.z);
-    player.distance=player.z;
-    updateUI();
+    camera.position.set(player.x,player.y+1.5,player.z);
+    player.distance = player.z;
+    document.getElementById('stats').innerText=`Distance: ${player.distance.toFixed(1)}m`;
+    document.getElementById('timer').innerText=`Time: ${((performance.now()-startTime)/1000).toFixed(2)}s`;
     checkCollisions();
-    bikeMesh.position.set(player.x,player.y,player.z);
-    bikeMesh.rotation.y=player.rotY;
     if(player.z>=trailLength){ finished=true; showMessage('FINISHED!','You completed the trail!'); }
   }
   renderer.render(scene,camera);
 }
 
-// -------------------- CONTROLS & COLLISIONS --------------------
 function handleControls(dt){
-  const turnSpeed=1.5;
-  const jumpPower=8;
-
+  const turnSpeed=1.5,jumpPower=8;
   if(keys['arrowleft']||keys['a']) player.rotVel=turnSpeed*dt;
   if(keys['arrowright']||keys['d']) player.rotVel=-turnSpeed*dt;
   if(keys[' ']&&player.onGround){ player.vy=jumpPower; player.onGround=false; }
-
-  player.rotY+=player.rotVel;
-  player.rotVel*=0.9;
-
+  player.rotY+=player.rotVel; player.rotVel*=0.9;
   if(keys['arrowup']||keys['w']){
     player.x+=Math.sin(player.rotY)*speed*dt;
     player.z+=Math.cos(player.rotY)*speed*dt;
   }
-
-  player.vy-=20*dt;
-  player.y+=player.vy*dt;
+  player.vy-=20*dt; player.y+=player.vy*dt;
   if(player.y<=1){ player.y=1; player.vy=0; player.onGround=true; } else player.onGround=false;
 }
 
@@ -212,33 +220,18 @@ function checkCollisions(){
   }
 }
 
-// -------------------- UI --------------------
-function updateUI(){
-  document.getElementById('stats').innerHTML=`Distance: ${player.distance.toFixed(1)}m`;
-  document.getElementById('timer').innerHTML=`Time: ${((performance.now()-startTime)/1000).toFixed(2)}s`;
-}
-
 function showMessage(title,text){
   document.getElementById('messageTitle').textContent=title;
   document.getElementById('messageText').textContent=text;
-  showScreen('messageScreen');
+  messageScreen.style.display='flex';
 }
 
-// -------------------- GAME START/RESTART --------------------
-function startGame(){
+function restartGame(){
   crashed=false; finished=false;
   player={x:0,y:1,z:0,vx:0,vy:0,rotY:0,rotVel:0,onGround:true,distance:0};
   startTime=performance.now();
-  initThree();
-  spawnTrail();
-  spawnObstacles();
-  spawnBike();
-  showScreen('gameUI');
-  animate();
+  messageScreen.style.display='none';
 }
-
-function restartGame(){ startGame(); }
-
 </script>
 </body>
 </html>
