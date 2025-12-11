@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mountain Bike 3D</title>
+<title>Mountain Bike 3D Enhanced</title>
 <style>
-html,body { margin:0; padding:0; overflow:hidden; font-family:Arial,sans-serif; }
-canvas { display:block; background: linear-gradient(to top,#4CAF50,#87CEEB);}
+html,body{margin:0;padding:0;overflow:hidden;font-family:Arial,sans-serif;}
+canvas{display:block;background:linear-gradient(to top,#4CAF50,#87CEEB);}
 .ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;}
-.menu, .bike-select, .map-select, .trail-select { background:white;border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:600px;width:90%; }
+.menu, .bike-select, .map-select, .trail-select{background:white;border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:600px;width:90%;}
 .grid{display:grid; gap:12px;}
 .grid-2{grid-template-columns:repeat(2,1fr);}
 .grid-1{grid-template-columns:1fr;}
-button{padding:12px;border-radius:8px;border:2px solid #888;background:#fff; cursor:pointer; font-weight:bold;}
+button{padding:12px;border-radius:8px;border:2px solid #888;background:#fff;cursor:pointer;font-weight:bold;}
 button:hover{border-color:#4CAF50;}
 .trail-preview{height:40px;background:#ccc;margin-top:4px;border-radius:4px;position:relative;}
 .trail-marker{width:8px;height:8px;position:absolute;border-radius:50%;top:16px;}
@@ -24,38 +24,38 @@ button:hover{border-color:#4CAF50;}
 <body>
 <canvas id="gameCanvas"></canvas>
 <div class="ui-overlay" id="uiOverlay">
-<div class="menu" id="menuScreen">
-<h1>Mountain Bike 3D</h1>
-<p style="text-align:center;">Ride the mountain trails in first person!</p>
-<button onclick="startBikeSelect()">Start Game</button>
-</div>
+  <div class="menu" id="menuScreen">
+    <h1>Mountain Bike 3D</h1>
+    <p style="text-align:center;">Ride the mountain trails in full 3D!</p>
+    <button onclick="startBikeSelect()">Start Game</button>
+  </div>
 
-<div class="bike-select" id="bikeSelectScreen" style="display:none;">
-<h2>Select Your Bike</h2>
-<div class="grid grid-2" id="bikeGrid"></div>
-<button onclick="backToMenu()">Exit</button>
-</div>
+  <div class="bike-select" id="bikeSelectScreen" style="display:none;">
+    <h2>Select Your Bike</h2>
+    <div class="grid grid-2" id="bikeGrid"></div>
+    <button onclick="backToMenu()">Exit</button>
+  </div>
 
-<div class="map-select" id="mapSelectScreen" style="display:none;">
-<h2>Select Your Mountain</h2>
-<div class="grid grid-1" id="mapGrid"></div>
-<button onclick="backToBikes()">Back</button>
-<button onclick="backToMenu()">Exit</button>
-</div>
+  <div class="map-select" id="mapSelectScreen" style="display:none;">
+    <h2>Select Your Mountain</h2>
+    <div class="grid grid-1" id="mapGrid"></div>
+    <button onclick="backToBikes()">Back</button>
+    <button onclick="backToMenu()">Exit</button>
+  </div>
 
-<div class="trail-select" id="trailSelectScreen" style="display:none;">
-<h2>Select a Trail</h2>
-<div class="grid grid-1" id="trailGrid"></div>
-<button onclick="backToMaps()">Back</button>
-<button onclick="backToMenu()">Exit</button>
-</div>
+  <div class="trail-select" id="trailSelectScreen" style="display:none;">
+    <h2>Select a Trail</h2>
+    <div class="grid grid-1" id="trailGrid"></div>
+    <button onclick="backToMaps()">Back</button>
+    <button onclick="backToMenu()">Exit</button>
+  </div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
 let selectedBike=null, selectedMap=null, selectedTrail=null;
 const keys={};
@@ -64,23 +64,29 @@ window.addEventListener('keyup',e=>keys[e.key]=false);
 
 // Bikes
 const bikes=[
-{id:1,name:'Trail Blazer',color:'#FF0000',speed:1.0,handling:0.8,jump:0.7},
-{id:2,name:'Mountain King',color:'#0000FF',speed:0.9,handling:1.0,jump:0.8},
-{id:3,name:'Rock Rider',color:'#00FF00',speed:1.2,handling:0.7,jump:0.6}
+  {id:1,name:'Trail Blazer',color:'#FF0000',speed:1.0,handling:0.8,jump:0.7},
+  {id:2,name:'Mountain King',color:'#0000FF',speed:0.9,handling:1.0,jump:0.8},
+  {id:3,name:'Rock Rider',color:'#00FF00',speed:1.2,handling:0.7,jump:0.6}
 ];
 
 // Maps & Trails with obstacles
 const maps=[
 {id:1,name:'Pine Hills',groundColor:'#8B4513',skyColor:'#87CEEB',dirtColor:'#A0522D',trails:[
-{ id:1,name:'Easy Pine 1',length:500,difficulty:'easy',obstacles:[{x:10,z:50,r:2},{x:-4,z:100,r:2}],trees:[{x:-2,z:60},{x:4,z:120}] },
-{ id:2,name:'Easy Pine 2',length:550,difficulty:'easy',obstacles:[{x:0,z:80,r:2}],trees:[{x:-3,z:90},{x:3,z:130}] },
-{ id:3,name:'Medium Pine 1',length:600,difficulty:'medium',obstacles:[{x:-1,z:70,r:3},{x:2,z:150,r:3}],trees:[{x:-3,z:100},{x:3,z:200}] },
-{ id:4,name:'Medium Pine 2',length:650,difficulty:'medium',obstacles:[{x:0,z:120,r:3}],trees:[{x:-4,z:140},{x:4,z:220}] },
-{ id:5,name:'Hard Pine 1',length:700,difficulty:'hard',obstacles:[{x:-2,z:150,r:4},{x:2,z:250,r:4}],trees:[{x:-3,z:160},{x:3,z:260}] },
-{ id:6,name:'Hard Pine 2',length:750,difficulty:'hard',obstacles:[{x:0,z:180,r:4}],trees:[{x:-4,z:190},{x:4,z:280}] }
+  { id:1,name:'Easy Pine 1',length:500,difficulty:'easy',
+    obstacles:[{x:2,z:50,h:2,r:1},{x:-3,z:100,h:1,r:1.5},{x:0,z:200,h:3,r:2}],
+    trees:[{x:-2,z:60,h:5},{x:4,z:120,h:6}],
+    bushes:[{x:1,z:30},{x:-1,z:80}],
+    rocks:[{x:0,z:150,h:1.5,r:1},{x:3,z:220,h:2,r:1.2}]
+  },
+  { id:2,name:'Medium Pine 1',length:600,difficulty:'medium',
+    obstacles:[{x:-1,z:70,h:2,r:1.2},{x:2,z:150,h:3,r:2}],
+    trees:[{x:-3,z:100,h:5},{x:3,z:200,h:6}],
+    bushes:[{x:-2,z:60},{x:2,z:130}],
+    rocks:[{x:1,z:180,h:1.5,r:1},{x:-2,z:210,h:2,r:1.3}]
+  }
 ]}];
 
-// UI navigation
+// UI navigation functions (same as before)
 function startBikeSelect(){ document.getElementById('menuScreen').style.display='none';
 const grid=document.getElementById('bikeGrid'); grid.innerHTML='';
 bikes.forEach(b=>{ const btn=document.createElement('button');
@@ -118,6 +124,13 @@ const game={player:{x:0,y:2,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,dis
 function startGame(){
 document.getElementById('uiOverlay').style.display='none';
 
+function project3D(x,z,y){
+  const scale=200/(z-game.player.z+50);
+  const screenX=canvas.width/2 + (x-game.player.x)*scale*50;
+  const screenY=canvas.height/2 - (y-game.player.y)*scale*50;
+  return {x:screenX,y:screenY,scale};
+}
+
 function gameLoop(){
   game.time+=0.016;
 
@@ -137,47 +150,51 @@ function gameLoop(){
   game.player.x+=moveX; game.player.z+=moveZ;
   game.player.vy -= 0.6; game.player.y += game.player.vy*0.016;
 
-  // Terrain & collision
+  // Collision
   let onGround=false;
   const trailWidth=5;
   if(Math.abs(game.player.x)>trailWidth) game.crashed=true;
-
   selectedTrail.obstacles.forEach(o=>{
     const dx=game.player.x-o.x; const dz=game.player.z-o.z;
     if(Math.sqrt(dx*dx+dz*dz)<o.r) game.crashed=true;
   });
-
-  // Trees collision optional (could just render)
-  selectedTrail.trees.forEach(tree=>{
-    const dx=game.player.x-tree.x; const dz=game.player.z-tree.z;
+  selectedTrail.trees.forEach(t=>{
+    const dx=game.player.x-t.x; const dz=game.player.z-t.z;
     if(Math.sqrt(dx*dx+dz*dz)<1) game.crashed=true;
   });
-
+  selectedTrail.rocks.forEach(r=>{
+    const dx=game.player.x-r.x; const dz=game.player.z-r.z;
+    if(Math.sqrt(dx*dx+dz*dz)<r.r) game.crashed=true;
+  });
   if(game.player.y<2){ game.player.y=2; game.player.vy=0; onGround=true; game.player.onGround=true; }
 
   // Render
   ctx.fillStyle=selectedMap.skyColor; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle=selectedMap.groundColor;
-  ctx.fillRect(0,canvas.height/2,canvas.width,canvas.height/2);
+  ctx.fillStyle=selectedMap.groundColor; ctx.fillRect(0,canvas.height/2,canvas.width,canvas.height/2);
 
   // Draw trail
   ctx.strokeStyle='#654321'; ctx.lineWidth=trailWidth*20; ctx.beginPath();
-  ctx.moveTo(canvas.width/2-trailWidth*10,canvas.height/2); ctx.lineTo(canvas.width/2+trailWidth*10,canvas.height/2+canvas.height/2); ctx.stroke();
+  ctx.moveTo(canvas.width/2-trailWidth*10,canvas.height/2);
+  ctx.lineTo(canvas.width/2+trailWidth*10,canvas.height);
+  ctx.stroke();
 
-  // Draw obstacles
+  // Draw obstacles 3D
   selectedTrail.obstacles.forEach(o=>{
-    const scale = 5/(o.z - game.player.z +50);
-    const screenX = canvas.width/2 + (o.x - game.player.x)*scale*50;
-    const screenY = canvas.height/2 + (o.z - game.player.z)*scale*50;
-    ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(screenX,screenY,10*scale,0,Math.PI*2); ctx.fill();
+    const p=project3D(o.x,o.z,o.h/2);
+    ctx.fillStyle='red'; ctx.beginPath();
+    ctx.arc(p.x,p.y,10*p.scale,0,Math.PI*2); ctx.fill();
   });
 
-  // Draw trees
+  // Trees 3D
   selectedTrail.trees.forEach(t=>{
-    const scale = 5/(t.z - game.player.z +50);
-    const screenX = canvas.width/2 + (t.x - game.player.x)*scale*50;
-    const screenY = canvas.height/2 + (t.z - game.player.z)*scale*50;
-    ctx.fillStyle='green'; ctx.fillRect(screenX-5*scale,screenY-10*scale,10*scale,20*scale);
+    const p=project3D(t.x,t.z,t.h/2);
+    ctx.fillStyle='green'; ctx.fillRect(p.x-5*p.scale,p.y-20*p.scale,10*p.scale,20*p.scale);
+  });
+
+  // Rocks 3D
+  selectedTrail.rocks.forEach(r=>{
+    const p=project3D(r.x,r.z,r.h/2);
+    ctx.fillStyle='gray'; ctx.beginPath(); ctx.ellipse(p.x,p.y,8*p.scale,6*p.scale,0,0,2*Math.PI); ctx.fill();
   });
 
   // HUD
