@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mountain Bike 3D</title>
 <style>
-  body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
-  #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-  .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; justify-content: center; align-items: center; flex-direction: column; pointer-events: all; }
-  button { cursor: pointer; margin: 5px; }
-  .overlay { position: absolute; color: white; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; font-weight: bold; }
+body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+#ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; justify-content: center; align-items: center; flex-direction: column; pointer-events: all; }
+button { cursor: pointer; margin: 5px; }
+.overlay { position: absolute; color: white; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -92,6 +92,7 @@ function setupBikeSelect(){
   container.innerHTML = '';
   bikes.forEach(bike=>{
     const btn = document.createElement('button');
+    btn.style.color="white";
     btn.textContent = bike.name + " " + "⭐".repeat(Math.ceil(bike.speed));
     btn.onclick = ()=>{
       selectedBike = bike;
@@ -122,6 +123,7 @@ function setupTrailSelect(){
   container.innerHTML='';
   selectedMap.trails.forEach(trail=>{
     const btn = document.createElement('button');
+    btn.style.color = trail.difficulty; // color-coded by difficulty
     btn.textContent = trail.name + " (" + trail.difficulty + ")";
     btn.onclick = ()=>{
       selectedTrail = trail;
@@ -136,6 +138,9 @@ function startGame(){
   initThree();
   spawnTrail();
   spawnObstacles();
+  crashed = false;
+  finished = false;
+  player = { x:0, y:2, z:0, vx:0, vy:0, rotY:0, rotVel:0, onGround:true, distance:0 };
   startTime = performance.now();
   animate();
 }
@@ -162,8 +167,10 @@ function initThree(){
 }
 
 function spawnTrail(){
-  const geometry = new THREE.PlaneGeometry(10, trailLength, 32,32);
-  const material = new THREE.MeshPhongMaterial({color:0x8B4513});
+  const colors = {green:0x228B22, blue:0x1E90FF, black:0x000000};
+  const color = colors[selectedTrail.difficulty] || 0x8B4513;
+  const geometry = new THREE.PlaneGeometry(6, trailLength, 32,32);
+  const material = new THREE.MeshPhongMaterial({color:color});
   trailMesh = new THREE.Mesh(geometry, material);
   trailMesh.rotation.x = -Math.PI/2;
   trailMesh.position.z = trailLength/2;
@@ -174,7 +181,7 @@ function spawnTrail(){
   const mountainMat = new THREE.MeshPhongMaterial({color:0x555555});
   for(let i=0;i<5;i++){
     const m = new THREE.Mesh(mountainGeom, mountainMat);
-    m.position.set(Math.random()*200-100,25,Math.random()*trailLength);
+    m.position.set(Math.random()*50-25,25,Math.random()*trailLength);
     scene.add(m);
   }
 }
@@ -198,7 +205,7 @@ function spawnObstacles(){
       const mat = new THREE.MeshPhongMaterial({color:0x2d5016});
       obj = new THREE.Mesh(geom, mat);
     }
-    obj.position.set(Math.random()*6-3,0.5,Math.random()*trailLength);
+    obj.position.set(Math.random()*4-2,0.5,Math.random()*(trailLength-20)+20); // offset start by 20
     scene.add(obj);
     obstacles.push(obj);
   }
@@ -234,11 +241,8 @@ function handleControls(dt){
   player.rotY += player.rotVel;
   player.rotVel *= 0.9;
 
-  player.vz = 10; // constant forward
-  player.vx = 0;
-
-  const moveX = Math.sin(player.rotY) * player.vz * dt;
-  const moveZ = Math.cos(player.rotY) * player.vz * dt;
+  const moveX = Math.sin(player.rotY) * 10 * dt;
+  const moveZ = Math.cos(player.rotY) * 10 * dt;
   player.x += moveX;
   player.z += moveZ;
 
@@ -259,7 +263,7 @@ function checkCollisions(){
     const dx = obj.position.x - player.x;
     const dz = obj.position.z - player.z;
     const dist = Math.sqrt(dx*dx+dz*dz);
-    if(dist<1.5){ // simple radius check
+    if(dist<1.5){
       crashed = true;
       showMessage('CRASHED!','You hit an obstacle!');
     }
