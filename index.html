@@ -15,6 +15,11 @@
   .grid-1 { grid-template-columns: 1fr; }
   button { padding: 12px; border-radius: 8px; border: 2px solid #888; background: #fff; cursor: pointer; font-weight: bold; }
   button:hover { border-color: #4CAF50; }
+  .trail-preview { height: 40px; background: #ccc; margin-top: 4px; border-radius: 4px; position: relative; }
+  .trail-marker { width: 8px; height: 8px; position: absolute; border-radius: 50%; top: 16px; }
+  .easy { background: green; }
+  .medium { background: blue; }
+  .hard { background: black; }
 </style>
 </head>
 <body>
@@ -30,18 +35,21 @@
   <div class="bike-select" id="bikeSelectScreen" style="display:none;">
     <h2>Select Your Bike</h2>
     <div class="grid grid-2" id="bikeGrid"></div>
+    <button onclick="backToMenu()">Exit</button>
   </div>
 
   <div class="map-select" id="mapSelectScreen" style="display:none;">
     <h2>Select Your Mountain</h2>
     <div class="grid grid-1" id="mapGrid"></div>
-    <button onclick="backToBikes()">Back to Bikes</button>
+    <button onclick="backToBikes()">Back</button>
+    <button onclick="backToMenu()">Exit</button>
   </div>
 
   <div class="trail-select" id="trailSelectScreen" style="display:none;">
     <h2>Select a Trail</h2>
     <div class="grid grid-1" id="trailGrid"></div>
-    <button onclick="backToMaps()">Back to Maps</button>
+    <button onclick="backToMaps()">Back</button>
+    <button onclick="backToMenu()">Exit</button>
   </div>
 </div>
 
@@ -125,10 +133,20 @@ function startTrailSelect() {
   grid.innerHTML = '';
   selectedMap.trails.forEach(trail=>{
     const btn = document.createElement('button');
-    btn.textContent = `${trail.name} • ${trail.length}m • ${trail.difficulty.toUpperCase()}`;
+    btn.innerHTML = `<div>${trail.name} • ${trail.length}m • ${trail.difficulty.toUpperCase()}</div>
+                     <div class="trail-preview">
+                       <div class="trail-marker ${trail.difficulty}" style="left:${Math.random()*80}%"></div>
+                     </div>`;
     btn.onclick = () => { selectedTrail = trail; startGame(); };
     grid.appendChild(btn);
   });
+}
+
+function backToMenu() {
+  document.getElementById('bikeSelectScreen').style.display='none';
+  document.getElementById('mapSelectScreen').style.display='none';
+  document.getElementById('trailSelectScreen').style.display='none';
+  document.getElementById('menuScreen').style.display='block';
 }
 
 function backToBikes() {
@@ -141,7 +159,7 @@ function backToMaps() {
   document.getElementById('mapSelectScreen').style.display='block';
 }
 
-// Game state
+// Game state & mechanics (same as previous code)
 const game = {
   player:{x:0,y:0,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,distance:0},
   objects:[],
@@ -154,11 +172,10 @@ const game = {
   trees:[]
 };
 
-// Initialize terrain, trees, obstacles for demo
 function initLevel() {
   game.player.x = 0;
   game.player.z = 0;
-  game.player.y = 2; // Start on ground
+  game.player.y = 2;
   game.player.vx = 0; game.player.vy=0; game.player.vz=5;
   game.crashed=false; game.finished=false; game.time=1;
   game.terrain = [];
@@ -166,65 +183,36 @@ function initLevel() {
   game.mountainSides = [];
   game.trees = [];
 
-  // Simple procedural trail
   for(let i=0;i<=selectedTrail.length;i+=5){
     game.terrain.push({centerX:0,height:0,z:i,leftEdge:-5,rightEdge:5,width:10});
   }
 }
 
-// Project 3D point to 2D
-function project3D(x,y,z){
-  const scale = 500/(z+50);
-  return {x:canvas.width/2 + x*scale, y:canvas.height/2 - y*scale, scale:scale, depth:z};
-}
-
-// Draw simple cylinder for tree/bush
-function drawCylinder(x,y,z,radius,height,color){
-  const p = project3D(x,y,z);
-  if(!p) return;
-  ctx.fillStyle=color;
-  ctx.beginPath();
-  ctx.ellipse(p.x,p.y,radius*p.scale,height*p.scale,0,0,2*Math.PI);
-  ctx.fill();
-}
-
-// Draw box for obstacles
-function drawBox(x,y,z,w,h,d,color){
-  const p = project3D(x,y,z);
-  if(!p) return;
-  ctx.fillStyle=color;
-  ctx.fillRect(p.x-w*p.scale/2,p.y-h*p.scale/2,w*p.scale,h*p.scale);
-}
+function project3D(x,y,z){ const scale = 500/(z+50); return {x:canvas.width/2 + x*scale, y:canvas.height/2 - y*scale, scale:scale, depth:z}; }
 
 function startGame() {
-  document.getElementById('trailSelectScreen').style.display='none';
   document.getElementById('uiOverlay').style.display='none';
   initLevel();
 
   function gameLoop(){
     game.time += 0.016;
-
-    // Controls
     const turnSpeed = 0.04;
     const jumpPower = 7 * selectedBike.jump;
     if(keys['ArrowLeft']||keys['a']||keys['A']){game.player.rotVel+=turnSpeed;game.player.vx+=0.08*selectedBike.handling;}
     if(keys['ArrowRight']||keys['d']||keys['D']){game.player.rotVel-=turnSpeed;game.player.vx-=0.08*selectedBike.handling;}
     if(keys[' '] && game.player.onGround){game.player.vy = jumpPower;game.player.onGround=false;}
     
-    // Physics
     game.player.vz = Math.max(3, Math.min(game.player.vz*selectedBike.speed,30));
     game.player.rotY+=game.player.rotVel;
     game.player.rotVel*=0.90;
     game.player.vx*=0.95;
-    game.player.rotVel=Math.max(-0.05,Math.min(game.player.rotVel,0.05));
     const moveX = Math.sin(game.player.rotY)*game.player.vz*0.016+game.player.vx*0.016;
     const moveZ = Math.cos(game.player.rotY)*game.player.vz*0.016;
     game.player.x+=moveX;
     game.player.z+=moveZ;
-    game.player.vy-=0.6; // gravity
+    game.player.vy-=0.6;
     game.player.y+=game.player.vy*0.016;
 
-    // Terrain collision
     const terrainInfo = getTerrainAt(game.player.x,game.player.z);
     if(game.player.y<=terrainInfo.height+2){
       game.player.y = terrainInfo.height+2;
@@ -233,15 +221,12 @@ function startGame() {
       game.player.onGround=true;
     }else game.player.onGround=false;
 
-    // Update distance and speed
     game.player.distance = game.player.z;
     game.speed = game.player.vz;
 
-    // Render
     ctx.fillStyle=selectedMap.skyColor;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Terrain
     ctx.fillStyle=selectedMap.groundColor;
     game.terrain.forEach(seg=>{
       const p1=project3D(seg.leftEdge,seg.height,seg.z);
@@ -257,7 +242,6 @@ function startGame() {
       }
     });
 
-    // Draw bike HUD
     ctx.fillStyle='rgba(0,0,0,0.6)';
     ctx.fillRect(10,10,280,110);
     ctx.fillStyle='#FFF';
@@ -288,12 +272,9 @@ function startGame() {
   gameLoop();
 }
 
-// Get terrain height at x,z
 function getTerrainAt(x,z){
   let closest={height:0,onTrack:true};
-  game.terrain.forEach(seg=>{
-    if(Math.abs(seg.z-z)<5) closest.height=seg.height;
-  });
+  game.terrain.forEach(seg=>{ if(Math.abs(seg.z-z)<5) closest.height=seg.height; });
   return closest;
 }
 </script>
