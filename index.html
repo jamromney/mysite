@@ -5,275 +5,297 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mountain Bike 3D</title>
 <style>
-  html, body { margin:0; padding:0; overflow:hidden; height:100%; background: linear-gradient(to bottom, #4aa1f0, #3c7d1e);}
-  canvas { display:block; margin:0 auto; background:transparent; }
+  html, body { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; }
+  canvas { display: block; background: linear-gradient(to top, #4CAF50, #87CEEB); }
+  .ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+  .menu, .bike-select, .map-select, .trail-select { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 600px; width: 90%; }
+  .menu h1, .bike-select h2, .map-select h2, .trail-select h2 { text-align: center; }
+  .grid { display: grid; gap: 12px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-1 { grid-template-columns: 1fr; }
+  button { padding: 12px; border-radius: 8px; border: 2px solid #888; background: #fff; cursor: pointer; font-weight: bold; }
+  button:hover { border-color: #4CAF50; }
 </style>
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+
+<div class="ui-overlay" id="uiOverlay">
+  <div class="menu" id="menuScreen">
+    <h1>Mountain Bike 3D</h1>
+    <p style="text-align:center;">Ride the mountain trails in first person!</p>
+    <button onclick="startBikeSelect()">Start Game</button>
+  </div>
+
+  <div class="bike-select" id="bikeSelectScreen" style="display:none;">
+    <h2>Select Your Bike</h2>
+    <div class="grid grid-2" id="bikeGrid"></div>
+  </div>
+
+  <div class="map-select" id="mapSelectScreen" style="display:none;">
+    <h2>Select Your Mountain</h2>
+    <div class="grid grid-1" id="mapGrid"></div>
+    <button onclick="backToBikes()">Back to Bikes</button>
+  </div>
+
+  <div class="trail-select" id="trailSelectScreen" style="display:none;">
+    <h2>Select a Trail</h2>
+    <div class="grid grid-1" id="trailGrid"></div>
+    <button onclick="backToMaps()">Back to Maps</button>
+  </div>
+</div>
+
 <script>
-// ------------------------- SETUP -------------------------
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+let screen = 'menu';
+let selectedBike = null;
+let selectedMap = null;
+let selectedTrail = null;
+let animationRef = null;
+
+// Key input
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+// Bikes
+const bikes = [
+  { id:1, name:'Trail Blazer', color:'#FF0000', speed:1.0, handling:0.8, jump:0.7 },
+  { id:2, name:'Mountain King', color:'#0000FF', speed:0.9, handling:1.0, jump:0.8 },
+  { id:3, name:'Rock Rider', color:'#00FF00', speed:1.2, handling:0.7, jump:0.6 }
+];
+
+// Maps and trails
+const maps = [
+  { id:1, name:'Pine Hills', groundColor:'#8B4513', skyColor:'#87CEEB', dirtColor:'#A0522D', trails:[
+    {id:1,name:'Easy Pine 1',length:500,difficulty:'easy',features:10},{id:2,name:'Easy Pine 2',length:550,difficulty:'easy',features:12},
+    {id:3,name:'Medium Pine 1',length:600,difficulty:'medium',features:15},{id:4,name:'Medium Pine 2',length:650,difficulty:'medium',features:18},
+    {id:5,name:'Hard Pine 1',length:700,difficulty:'hard',features:22},{id:6,name:'Hard Pine 2',length:750,difficulty:'hard',features:25}
+  ]},
+  { id:2, name:'Rocky Ridge', groundColor:'#A0522D', skyColor:'#87CEEB', dirtColor:'#D2691E', trails:[
+    {id:1,name:'Easy Rock 1',length:500,difficulty:'easy',features:10},{id:2,name:'Easy Rock 2',length:550,difficulty:'easy',features:12},
+    {id:3,name:'Medium Rock 1',length:600,difficulty:'medium',features:15},{id:4,name:'Medium Rock 2',length:650,difficulty:'medium',features:18},
+    {id:5,name:'Hard Rock 1',length:700,difficulty:'hard',features:22},{id:6,name:'Hard Rock 2',length:750,difficulty:'hard',features:25}
+  ]},
+  { id:3, name:'Black Diamond Peaks', groundColor:'#2F4F4F', skyColor:'#4682B4', dirtColor:'#696969', trails:[
+    {id:1,name:'Easy Peak 1',length:500,difficulty:'easy',features:10},{id:2,name:'Easy Peak 2',length:550,difficulty:'easy',features:12},
+    {id:3,name:'Medium Peak 1',length:600,difficulty:'medium',features:15},{id:4,name:'Medium Peak 2',length:650,difficulty:'medium',features:18},
+    {id:5,name:'Hard Peak 1',length:700,difficulty:'hard',features:22},{id:6,name:'Hard Peak 2',length:750,difficulty:'hard',features:25}
+  ]}
+];
+
+function startBikeSelect() {
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('bikeSelectScreen').style.display='block';
+  const grid = document.getElementById('bikeGrid');
+  grid.innerHTML = '';
+  bikes.forEach(bike=>{
+    const btn = document.createElement('button');
+    btn.innerHTML = `<div style="width:32px;height:32px;background:${bike.color};border-radius:50%;margin:auto;"></div>
+                     <div>${bike.name}</div>
+                     <div>Speed: ${'⭐'.repeat(Math.ceil(bike.speed*3))}</div>
+                     <div>Handling: ${'⭐'.repeat(Math.ceil(bike.handling*3))}</div>
+                     <div>Jump: ${'⭐'.repeat(Math.ceil(bike.jump*3))}</div>`;
+    btn.onclick = () => { selectedBike = bike; startMapSelect(); };
+    grid.appendChild(btn);
+  });
+}
+
+function startMapSelect() {
+  document.getElementById('bikeSelectScreen').style.display='none';
+  document.getElementById('mapSelectScreen').style.display='block';
+  const grid = document.getElementById('mapGrid');
+  grid.innerHTML = '';
+  maps.forEach(map=>{
+    const btn = document.createElement('button');
+    btn.textContent = map.name;
+    btn.onclick = () => { selectedMap = map; startTrailSelect(); };
+    grid.appendChild(btn);
+  });
+}
+
+function startTrailSelect() {
+  document.getElementById('mapSelectScreen').style.display='none';
+  document.getElementById('trailSelectScreen').style.display='block';
+  const grid = document.getElementById('trailGrid');
+  grid.innerHTML = '';
+  selectedMap.trails.forEach(trail=>{
+    const btn = document.createElement('button');
+    btn.textContent = `${trail.name} • ${trail.length}m • ${trail.difficulty.toUpperCase()}`;
+    btn.onclick = () => { selectedTrail = trail; startGame(); };
+    grid.appendChild(btn);
+  });
+}
+
+function backToBikes() {
+  document.getElementById('mapSelectScreen').style.display='none';
+  document.getElementById('bikeSelectScreen').style.display='block';
+}
+
+function backToMaps() {
+  document.getElementById('trailSelectScreen').style.display='none';
+  document.getElementById('mapSelectScreen').style.display='block';
+}
+
+// Game state
 const game = {
-    time: 0,
-    player: {x:0,y:10,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,distance:0},
-    crashed:false,
-    finished:false,
-    speed:0,
-    objects:[],
-    terrain:[],
-    mountainSides:[],
-    trees:[]
+  player:{x:0,y:0,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,distance:0},
+  objects:[],
+  terrain:[],
+  crashed:false,
+  finished:false,
+  speed:0,
+  time:0,
+  mountainSides:[],
+  trees:[]
 };
 
-// ------------------------- UTILITIES -------------------------
-function shadeColor(color, percent){
-    const f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent;
-    const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
-    return "#" + (0x1000000 + (Math.round((t-R)*p)+R)*0x10000 + (Math.round((t-G)*p)+G)*0x100 + (Math.round((t-B)*p)+B)).toString(16).slice(1);
+// Initialize terrain, trees, obstacles for demo
+function initLevel() {
+  game.player.x = 0;
+  game.player.z = 0;
+  game.player.y = 2; // Start on ground
+  game.player.vx = 0; game.player.vy=0; game.player.vz=5;
+  game.crashed=false; game.finished=false; game.time=1;
+  game.terrain = [];
+  game.objects = [];
+  game.mountainSides = [];
+  game.trees = [];
+
+  // Simple procedural trail
+  for(let i=0;i<=selectedTrail.length;i+=5){
+    game.terrain.push({centerX:0,height:0,z:i,leftEdge:-5,rightEdge:5,width:10});
+  }
 }
 
+// Project 3D point to 2D
 function project3D(x,y,z){
-    const scale = 500/(z-game.player.z+500);
-    const px = canvas.width/2 + (x-game.player.x)*scale;
-    const py = canvas.height/2 - (y-game.player.y)*scale;
-    return {x:px, y:py, depth:z};
+  const scale = 500/(z+50);
+  return {x:canvas.width/2 + x*scale, y:canvas.height/2 - y*scale, scale:scale, depth:z};
 }
 
+// Draw simple cylinder for tree/bush
 function drawCylinder(x,y,z,radius,height,color){
-    const p = project3D(x,y,z);
-    const ph = project3D(x,y+height,z);
-    if(!p || !ph) return;
-    ctx.fillStyle=color;
-    ctx.beginPath();
-    ctx.ellipse(p.x,p.y,radius*ph.depth/500,radius*ph.depth/500,0,0,Math.PI*2);
-    ctx.fill();
+  const p = project3D(x,y,z);
+  if(!p) return;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.ellipse(p.x,p.y,radius*p.scale,height*p.scale,0,0,2*Math.PI);
+  ctx.fill();
 }
 
+// Draw box for obstacles
 function drawBox(x,y,z,w,h,d,color){
-    const p = project3D(x,y,z);
-    if(!p) return;
-    ctx.fillStyle=color;
-    const scale = 500/(z - game.player.z + 500);
-    ctx.fillRect(p.x - w*scale/2, p.y - h*scale, w*scale, h*scale);
+  const p = project3D(x,y,z);
+  if(!p) return;
+  ctx.fillStyle=color;
+  ctx.fillRect(p.x-w*p.scale/2,p.y-h*p.scale/2,w*p.scale,h*p.scale);
 }
 
-// ------------------------- TERRAIN -------------------------
-const trackLength = 1000;
-for(let i=0;i<trackLength;i++){
-    const height = Math.sin(i*0.05)*20;
-    game.terrain.push({
-        z:i*5,
-        height:height,
-        width:20,
-        leftEdge:-10,
-        rightEdge:10,
-        centerX:0
-    });
-}
+function startGame() {
+  document.getElementById('trailSelectScreen').style.display='none';
+  document.getElementById('uiOverlay').style.display='none';
+  initLevel();
 
-// ------------------------- OBJECTS -------------------------
-game.objects.push({type:'rock', x:2, y:0, z:100, radius:2, color:'#888'});
-game.objects.push({type:'log', x:-3, y:0, z:200, width:2, length:6, color:'#552200'});
-game.objects.push({type:'finish', x:0, y:0, z:trackLength*5, depth:2});
+  function gameLoop(){
+    game.time += 0.016;
 
-// ------------------------- TREES -------------------------
-for(let i=50;i<trackLength*5;i+=50){
-    const isBush=Math.random()<0.3;
-    game.trees.push({x:(Math.random()-0.5)*30, y:0, z:i, radius:isBush?3:2, height:isBush?2:10, isBush:isBush});
-}
+    // Controls
+    const turnSpeed = 0.04;
+    const jumpPower = 7 * selectedBike.jump;
+    if(keys['ArrowLeft']||keys['a']||keys['A']){game.player.rotVel+=turnSpeed;game.player.vx+=0.08*selectedBike.handling;}
+    if(keys['ArrowRight']||keys['d']||keys['D']){game.player.rotVel-=turnSpeed;game.player.vx-=0.08*selectedBike.handling;}
+    if(keys[' '] && game.player.onGround){game.player.vy = jumpPower;game.player.onGround=false;}
+    
+    // Physics
+    game.player.vz = Math.max(3, Math.min(game.player.vz*selectedBike.speed,30));
+    game.player.rotY+=game.player.rotVel;
+    game.player.rotVel*=0.90;
+    game.player.vx*=0.95;
+    game.player.rotVel=Math.max(-0.05,Math.min(game.player.rotVel,0.05));
+    const moveX = Math.sin(game.player.rotY)*game.player.vz*0.016+game.player.vx*0.016;
+    const moveZ = Math.cos(game.player.rotY)*game.player.vz*0.016;
+    game.player.x+=moveX;
+    game.player.z+=moveZ;
+    game.player.vy-=0.6; // gravity
+    game.player.y+=game.player.vy*0.016;
 
-// ------------------------- CONTROLS -------------------------
-const keys = {};
-window.addEventListener('keydown', e=>keys[e.key]=true);
-window.addEventListener('keyup', e=>keys[e.key]=false);
+    // Terrain collision
+    const terrainInfo = getTerrainAt(game.player.x,game.player.z);
+    if(game.player.y<=terrainInfo.height+2){
+      game.player.y = terrainInfo.height+2;
+      if(game.player.vy<-12) game.crashed=true;
+      game.player.vy=0;
+      game.player.onGround=true;
+    }else game.player.onGround=false;
 
-// ------------------------- GAME LOOP -------------------------
-function gameLoop(){
-    game.time+=0.016;
-    if(!game.crashed && !game.finished){
-        // --- Controls ---
-        const turnSpeed = 0.02, jumpPower = 12;
-        if(keys['a']||keys['A']||keys['ArrowLeft']){ game.player.rotVel+=turnSpeed; game.player.vx+=0.08; }
-        if(keys['d']||keys['D']||keys['ArrowRight']){ game.player.rotVel-=turnSpeed; game.player.vx-=0.08; }
-        if(keys[' '] && game.player.onGround){ game.player.vy=jumpPower; game.player.onGround=false; }
+    // Update distance and speed
+    game.player.distance = game.player.z;
+    game.speed = game.player.vz;
 
-        // --- Physics ---
-        game.player.vz=Math.max(3,Math.min(game.player.vz,30));
-        game.player.rotY+=game.player.rotVel;
-        game.player.rotVel*=0.90;
-        game.player.vx*=0.95;
-        game.player.rotVel=Math.max(-0.05,Math.min(game.player.rotVel,0.05));
-        const moveX = Math.sin(game.player.rotY)*game.player.vz*0.016 + game.player.vx*0.016;
-        const moveZ = Math.cos(game.player.rotY)*game.player.vz*0.016;
-        game.player.x+=moveX;
-        game.player.z+=moveZ;
-        game.player.vy-=0.6;
-        game.player.y+=game.player.vy*0.016;
-
-        // Terrain collision
-        const terrainInfo = game.terrain[Math.floor(game.player.z/5)] || {height:0};
-        if(game.player.y <= terrainInfo.height + 2){
-            game.player.y = terrainInfo.height+2;
-            if(game.player.vy<-12) game.crashed=true;
-            game.player.vy=0; game.player.onGround=true;
-        } else game.player.onGround=false;
-
-        // Objects collision
-        game.objects.forEach(obj=>{
-            const dx=obj.x-game.player.x, dz=obj.z-game.player.z;
-            const dist=Math.sqrt(dx*dx+dz*dz);
-            if(obj.type==='rock'&&dist<obj.radius+1.5&&game.player.onGround) game.crashed=true;
-            if(obj.type==='log'&&dist<2&&game.player.onGround) game.crashed=true;
-            if(obj.type==='finish'&&game.player.z>=obj.z) game.finished=true;
-        });
-
-        game.player.distance=game.player.z;
-        game.speed=game.player.vz;
-    }
-
-    // --- Rendering ---
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    // Sky
-    ctx.fillStyle='#4aa1f0';
+    // Render
+    ctx.fillStyle=selectedMap.skyColor;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Distant mountains
-    ctx.fillStyle=shadeColor('#3c7d1e',-0.4);
-    ctx.globalAlpha=0.6;
-    ctx.beginPath();
-    for(let i=0;i<canvas.width;i+=30){
-        const h=150+Math.sin(i*0.008 + game.player.z*0.01)*80;
-        i===0?ctx.moveTo(i,h):ctx.lineTo(i,h);
-    }
-    ctx.lineTo(canvas.width,canvas.height);
-    ctx.lineTo(0,canvas.height);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha=1;
-
-    // Terrain segments
-    for(let i=0;i<game.terrain.length-1;i++){
-        const seg=game.terrain[i], next=game.terrain[i+1];
-        const p1=project3D(seg.leftEdge,seg.height,seg.z);
-        const p2=project3D(seg.rightEdge,seg.height,seg.z);
-        const p3=project3D(next.rightEdge,next.height,next.z);
-        const p4=project3D(next.leftEdge,next.height,next.z);
-        if(p1 && p2 && p3 && p4){
-            const dirtGrad=ctx.createLinearGradient(p1.x,p1.y,p3.x,p3.y);
-            dirtGrad.addColorStop(0,'#7d5a3c');
-            dirtGrad.addColorStop(0.5,shadeColor('#7d5a3c',-0.1));
-            dirtGrad.addColorStop(1,shadeColor('#7d5a3c',0.1));
-            ctx.fillStyle=dirtGrad;
-            ctx.beginPath();
-            ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.lineTo(p3.x,p3.y); ctx.lineTo(p4.x,p4.y); ctx.closePath();
-            ctx.fill();
-        }
-    }
-
-    // Objects
-    game.objects.forEach(obj=>{
-        if(obj.type==='rock') drawCylinder(obj.x,obj.y,obj.z,obj.radius,2,obj.color);
-        else if(obj.type==='log') drawBox(obj.x,obj.y,obj.z,obj.width,obj.width,obj.length,obj.color);
+    // Terrain
+    ctx.fillStyle=selectedMap.groundColor;
+    game.terrain.forEach(seg=>{
+      const p1=project3D(seg.leftEdge,seg.height,seg.z);
+      const p2=project3D(seg.rightEdge,seg.height,seg.z);
+      if(p1 && p2){
+        ctx.beginPath();
+        ctx.moveTo(p1.x,p1.y);
+        ctx.lineTo(p2.x,p2.y);
+        ctx.lineTo(p2.x,canvas.height);
+        ctx.lineTo(p1.x,canvas.height);
+        ctx.closePath();
+        ctx.fill();
+      }
     });
 
-    // Trees
-    game.trees.forEach(tree=>{
-        if(tree.isBush) drawCylinder(tree.x,tree.y,tree.z,tree.radius,tree.height,'#2d5016');
-        else{
-            drawCylinder(tree.x,tree.y,tree.z,tree.radius*0.6,tree.height*0.3,'#3d2817');
-            const layers=3;
-            for(let i=0;i<layers;i++){
-                drawCylinder(tree.x,tree.y + tree.height*0.3 + i*tree.height*0.23,tree.z,tree.radius*(1.8-i*0.3),tree.height*0.23,shadeColor('#2d5016',i*0.1));
-            }
-        }
-    });
+    // Draw bike HUD
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(10,10,280,110);
+    ctx.fillStyle='#FFF';
+    ctx.font='bold 18px Arial';
+    ctx.fillText(`Distance: ${Math.floor(game.player.distance)}m / ${selectedTrail.length}m`,20,35);
+    ctx.fillText(`Speed: ${Math.floor(game.speed*8)} km/h`,20,60);
+    ctx.fillText(`Time: ${game.time.toFixed(1)}s`,20,85);
+    ctx.fillText(`Air: ${game.player.onGround?'NO':'YES'}`,20,110);
 
-    // --- Bike (first-person) ---
-    const wheelRadius=50, wheelY=canvas.height-60;
-    // Fork
-    ctx.fillStyle='#4a4a4a';
-    ctx.beginPath();
-    ctx.moveTo(canvas.width/2-30,canvas.height-180); ctx.lineTo(canvas.width/2-22,wheelY-50);
-    ctx.lineTo(canvas.width/2-15,wheelY-50); ctx.lineTo(canvas.width/2-20,canvas.height-180);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(canvas.width/2+30,canvas.height-180); ctx.lineTo(canvas.width/2+22,wheelY-50);
-    ctx.lineTo(canvas.width/2+15,wheelY-50); ctx.lineTo(canvas.width/2+20,canvas.height-180);
-    ctx.closePath(); ctx.fill();
-    ctx.fillRect(canvas.width/2-35,canvas.height-185,70,12);
-    ctx.fillRect(canvas.width/2-15,canvas.height-220,30,40);
-
-    // Front wheel
-    const wheelGrad=ctx.createRadialGradient(canvas.width/2,wheelY,0,canvas.width/2,wheelY,wheelRadius);
-    wheelGrad.addColorStop(0,'#1a1a1a'); wheelGrad.addColorStop(0.7,'#0a0a0a'); wheelGrad.addColorStop(1,'#000');
-    ctx.fillStyle=wheelGrad;
-    ctx.beginPath(); ctx.ellipse(canvas.width/2,wheelY,wheelRadius,wheelRadius*0.25,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=6;
-    ctx.beginPath(); ctx.ellipse(canvas.width/2,wheelY,wheelRadius-3,(wheelRadius*0.25)-1,0,0,Math.PI*2); ctx.stroke();
-
-    // Tire tread and spokes
-    for(let i=0;i<12;i++){
-        const angle=(i/12)*Math.PI*2+game.time*8;
-        ctx.strokeStyle='#333'; ctx.lineWidth=2;
-        const r1=wheelRadius-15,r2=wheelRadius-5;
-        const x1=canvas.width/2+Math.cos(angle)*r1, y1=wheelY+Math.sin(angle)*r1*0.25;
-        const x2=canvas.width/2+Math.cos(angle)*r2, y2=wheelY+Math.sin(angle)*r2*0.25;
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    }
-    ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
-    for(let i=0;i<16;i++){
-        const angle=(i/16)*Math.PI*2+game.time*8;
-        const x1=canvas.width/2+Math.cos(angle)*8, y1=wheelY+Math.sin(angle)*2;
-        const x2=canvas.width/2+Math.cos(angle)*(wheelRadius-15), y2=wheelY+Math.sin(angle)*((wheelRadius*0.25)-4);
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    }
-    ctx.fillStyle='#666'; ctx.beginPath(); ctx.ellipse(canvas.width/2,wheelY,10,3,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#888'; ctx.beginPath(); ctx.ellipse(canvas.width/2,wheelY,12,3.5,0,0,Math.PI*2); ctx.fill();
-
-    // --- Handlebars ---
-    const barWidth=380, barY=canvas.height-140, gripSize=40, gripHeight=100;
-    ctx.strokeStyle='#333'; ctx.lineWidth=10; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(canvas.width/2-20,barY-20); ctx.quadraticCurveTo(canvas.width/2-100,barY-10,canvas.width/2-barWidth/2-10,barY+30); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(canvas.width/2+20,barY-20); ctx.quadraticCurveTo(canvas.width/2+100,barY-10,canvas.width/2+barWidth/2+10,barY+30); ctx.stroke();
-
-    // Grips
-    const leftGrad=ctx.createLinearGradient(canvas.width/2-barWidth/2-gripSize,0,canvas.width/2-barWidth/2,0);
-    leftGrad.addColorStop(0,'#1a1a1a'); leftGrad.addColorStop(0.5,'#2a2a2a'); leftGrad.addColorStop(1,'#1a1a1a');
-    ctx.fillStyle=leftGrad; ctx.fillRect(canvas.width/2-barWidth/2-gripSize,barY,gripSize,gripHeight);
-    const rightGrad=ctx.createLinearGradient(canvas.width/2+barWidth/2,0,canvas.width/2+barWidth/2+gripSize,0);
-    rightGrad.addColorStop(0,'#1a1a1a'); rightGrad.addColorStop(0.5,'#2a2a2a'); rightGrad.addColorStop(1,'#1a1a1a');
-    ctx.fillStyle=rightGrad; ctx.fillRect(canvas.width/2+barWidth/2,barY,gripSize,gripHeight);
-
-    // --- UI ---
-    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(10,10,280,145);
-    ctx.fillStyle='#FFF'; ctx.font='bold 18px Arial';
-    ctx.fillText(`Distance: ${Math.floor(game.player.distance)}m`, 20,35);
-    ctx.fillText(`Speed: ${Math.floor(game.speed*8)} km/h`, 20,60);
-    ctx.fillText(`Air: ${game.player.onGround?'NO':'YES'}`,20,85);
-    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(canvas.width-160,10,150,60);
-    ctx.fillStyle='#FFD700'; ctx.font='bold 32px Arial';
-    ctx.fillText(`${(game.time-1).toFixed(2)}s`,canvas.width-145,50);
-
-    if(game.crashed){
-        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle='#FF0000'; ctx.font='bold 60px Arial'; ctx.fillText('CRASHED!',canvas.width/2-150,canvas.height/2-50);
-    }
-    if(game.finished){
-        ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle='#4CAF50'; ctx.font='bold 60px Arial'; ctx.fillText('FINISHED!',canvas.width/2-150,canvas.height/2-40);
+    if(game.crashed || game.player.z>=selectedTrail.length){ 
+      ctx.fillStyle='rgba(0,0,0,0.8)'; 
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle=game.crashed?'#FF0000':'#4CAF50';
+      ctx.font='bold 60px Arial';
+      ctx.fillText(game.crashed?'CRASHED!':'FINISHED!',canvas.width/2-150,canvas.height/2-40);
+      ctx.fillStyle='#FFF';
+      ctx.font='32px Arial';
+      ctx.fillText(`Time: ${game.time.toFixed(2)}s`,canvas.width/2-90,canvas.height/2+20);
+      ctx.font='28px Arial';
+      ctx.fillText('Press R to retry',canvas.width/2-100,canvas.height/2+70);
+      if(keys['r']||keys['R']) initLevel();
+      animationRef=requestAnimationFrame(gameLoop);
+      return;
     }
 
-    requestAnimationFrame(gameLoop);
+    animationRef=requestAnimationFrame(gameLoop);
+  }
+  gameLoop();
 }
 
-gameLoop();
-window.addEventListener('resize',()=>{canvas.width=window.innerWidth; canvas.height=window.innerHeight;});
+// Get terrain height at x,z
+function getTerrainAt(x,z){
+  let closest={height:0,onTrack:true};
+  game.terrain.forEach(seg=>{
+    if(Math.abs(seg.z-z)<5) closest.height=seg.height;
+  });
+  return closest;
+}
 </script>
 </body>
 </html>
