@@ -3,221 +3,333 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mountain Bike 3D Enhanced</title>
+<title>Mountain Bike 3D</title>
 <style>
-html,body{margin:0;padding:0;overflow:hidden;font-family:Arial,sans-serif;}
-canvas{display:block;background:linear-gradient(to top,#4CAF50,#87CEEB);}
-.ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;}
-.menu, .bike-select, .map-select, .trail-select{background:white;border-radius:12px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.3); max-width:600px;width:90%;}
-.grid{display:grid; gap:12px;}
-.grid-2{grid-template-columns:repeat(2,1fr);}
-.grid-1{grid-template-columns:1fr;}
-button{padding:12px;border-radius:8px;border:2px solid #888;background:#fff;cursor:pointer;font-weight:bold;}
-button:hover{border-color:#4CAF50;}
-.trail-preview{height:40px;background:#ccc;margin-top:4px;border-radius:4px;position:relative;}
-.trail-marker{width:8px;height:8px;position:absolute;border-radius:50%;top:16px;}
-.easy{background:green;}
-.medium{background:blue;}
-.hard{background:black;}
+  html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family: Arial, sans-serif; }
+  .menu, .selection { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; border-radius:12px; padding:2rem; box-shadow:0 4px 20px rgba(0,0,0,0.5); max-width:90vw; width:400px; text-align:center; }
+  button { padding:0.75rem 1.5rem; margin:0.5rem; font-size:1rem; border-radius:8px; border:none; cursor:pointer; }
+  button:hover { opacity:0.9; }
+  canvas { display:block; margin:0 auto; border:4px solid #444; background:linear-gradient(to top, #4a9c2f, #87ceeb);}
+  .stats { text-align:left; font-size:0.9rem; margin-top:0.5rem; }
+  .trail-difficulty { font-weight:bold; color:white; padding:0.2rem 0.4rem; border-radius:4px; }
+  .back-btn { background:#888; color:white; }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
-<div class="ui-overlay" id="uiOverlay">
-  <div class="menu" id="menuScreen">
-    <h1>Mountain Bike 3D</h1>
-    <p style="text-align:center;">Ride the mountain trails in full 3D!</p>
-    <button onclick="startBikeSelect()">Start Game</button>
-  </div>
 
-  <div class="bike-select" id="bikeSelectScreen" style="display:none;">
-    <h2>Select Your Bike</h2>
-    <div class="grid grid-2" id="bikeGrid"></div>
-    <button onclick="backToMenu()">Exit</button>
-  </div>
-
-  <div class="map-select" id="mapSelectScreen" style="display:none;">
-    <h2>Select Your Mountain</h2>
-    <div class="grid grid-1" id="mapGrid"></div>
-    <button onclick="backToBikes()">Back</button>
-    <button onclick="backToMenu()">Exit</button>
-  </div>
-
-  <div class="trail-select" id="trailSelectScreen" style="display:none;">
-    <h2>Select a Trail</h2>
-    <div class="grid grid-1" id="trailGrid"></div>
-    <button onclick="backToMaps()">Back</button>
-    <button onclick="backToMenu()">Exit</button>
-  </div>
+<!-- Start Screen -->
+<div id="menu" class="menu">
+  <h1>Mountain Bike 3D</h1>
+  <p>Ride the mountain trails in first person!</p>
+  <button id="startBtn">Start Game</button>
 </div>
 
+<!-- Bike Selection -->
+<div id="bikeSelect" class="selection" style="display:none;">
+  <h2>Select Your Bike</h2>
+  <div id="bikeList"></div>
+  <button class="back-btn" onclick="goBack('menu')">Back</button>
+</div>
+
+<!-- Map Selection -->
+<div id="mapSelect" class="selection" style="display:none;">
+  <h2>Select a Mountain</h2>
+  <div id="mapList"></div>
+  <button class="back-btn" onclick="goBack('bikeSelect')">Back</button>
+</div>
+
+<!-- Trail Selection -->
+<div id="trailSelect" class="selection" style="display:none;">
+  <h2>Select a Trail</h2>
+  <div id="trailList"></div>
+  <button class="back-btn" onclick="goBack('mapSelect')">Back</button>
+</div>
+
+<!-- Gameplay Canvas -->
+<canvas id="gameCanvas" width="1024" height="576" style="display:none;"></canvas>
+
 <script>
-const canvas=document.getElementById('gameCanvas');
-const ctx=canvas.getContext('2d');
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-let selectedBike=null, selectedMap=null, selectedTrail=null;
-const keys={};
-window.addEventListener('keydown',e=>keys[e.key]=true);
-window.addEventListener('keyup',e=>keys[e.key]=false);
+let screen = 'menu';
+let selectedBike = null;
+let selectedMap = null;
+let selectedTrail = null;
+let game = {};
+let keys = {};
+let animationRef;
+let gameTime = 0;
 
-// Bikes
-const bikes=[
-  {id:1,name:'Trail Blazer',color:'#FF0000',speed:1.0,handling:0.8,jump:0.7},
-  {id:2,name:'Mountain King',color:'#0000FF',speed:0.9,handling:1.0,jump:0.8},
-  {id:3,name:'Rock Rider',color:'#00FF00',speed:1.2,handling:0.7,jump:0.6}
+const bikes = [
+  {id:'mountain1', name:'Trail Blazer', color:'#ff0000', speed:3, handling:3, jump:2},
+  {id:'mountain2', name:'Rock Rider', color:'#00ff00', speed:2, handling:4, jump:3},
+  {id:'mountain3', name:'Peak Crusher', color:'#0000ff', speed:4, handling:2, jump:3},
 ];
 
-// Maps & Trails with obstacles
-const maps=[
-{id:1,name:'Pine Hills',groundColor:'#8B4513',skyColor:'#87CEEB',dirtColor:'#A0522D',trails:[
-  { id:1,name:'Easy Pine 1',length:500,difficulty:'easy',
-    obstacles:[{x:2,z:50,h:2,r:1},{x:-3,z:100,h:1,r:1.5},{x:0,z:200,h:3,r:2}],
-    trees:[{x:-2,z:60,h:5},{x:4,z:120,h:6}],
-    bushes:[{x:1,z:30},{x:-1,z:80}],
-    rocks:[{x:0,z:150,h:1.5,r:1},{x:3,z:220,h:2,r:1.2}]
-  },
-  { id:2,name:'Medium Pine 1',length:600,difficulty:'medium',
-    obstacles:[{x:-1,z:70,h:2,r:1.2},{x:2,z:150,h:3,r:2}],
-    trees:[{x:-3,z:100,h:5},{x:3,z:200,h:6}],
-    bushes:[{x:-2,z:60},{x:2,z:130}],
-    rocks:[{x:1,z:180,h:1.5,r:1},{x:-2,z:210,h:2,r:1.3}]
+const maps = [
+  {id:'greenhill', name:'Green Hill', groundColor:'#3a9a2e', skyColor:'#87ceeb', trails:[]},
+  {id:'bluevalley', name:'Blue Valley', groundColor:'#4a7fa8', skyColor:'#a0cfff', trails:[]},
+  {id:'blackmount', name:'Black Mountain', groundColor:'#555555', skyColor:'#777777', trails:[]},
+];
+
+// Generate 6 trails per map: 2 easy, 2 medium, 2 hard
+maps.forEach(map => {
+  map.trails = [
+    {id:'1', name:'Easy Loop 1', length:800, features:5, difficulty:'green'},
+    {id:'2', name:'Easy Loop 2', length:850, features:6, difficulty:'green'},
+    {id:'3', name:'Medium Pass 1', length:1200, features:10, difficulty:'blue'},
+    {id:'4', name:'Medium Pass 2', length:1250, features:9, difficulty:'blue'},
+    {id:'5', name:'Hard Peak 1', length:1500, features:15, difficulty:'black'},
+    {id:'6', name:'Hard Peak 2', length:1550, features:16, difficulty:'black'},
+  ];
+});
+
+// Navigation
+function goBack(target){
+  document.getElementById('menu').style.display='none';
+  document.getElementById('bikeSelect').style.display='none';
+  document.getElementById('mapSelect').style.display='none';
+  document.getElementById('trailSelect').style.display='none';
+  document.getElementById('gameCanvas').style.display='none';
+  if(target==='menu') document.getElementById('menu').style.display='block';
+  if(target==='bikeSelect') document.getElementById('bikeSelect').style.display='block';
+  if(target==='mapSelect') document.getElementById('mapSelect').style.display='block';
+  if(target==='trailSelect') document.getElementById('trailSelect').style.display='block';
+}
+
+// Populate bikes
+const bikeList = document.getElementById('bikeList');
+bikes.forEach(bike=>{
+  const btn = document.createElement('button');
+  btn.style.display='block';
+  btn.style.margin='0.5rem auto';
+  btn.innerHTML=`<strong>${bike.name}</strong>
+  <div class="stats">Speed: ${'⭐'.repeat(bike.speed)}<br>Handling: ${'⭐'.repeat(bike.handling)}<br>Jump: ${'⭐'.repeat(bike.jump)}</div>`;
+  btn.onclick = ()=>{
+    selectedBike = bike;
+    showScreen('mapSelect');
+  };
+  bikeList.appendChild(btn);
+});
+
+// Populate maps
+const mapList = document.getElementById('mapList');
+maps.forEach(map=>{
+  const btn = document.createElement('button');
+  btn.style.display='block';
+  btn.style.margin='0.5rem auto';
+  btn.innerHTML=map.name;
+  btn.onclick = ()=>{
+    selectedMap = map;
+    showScreen('trailSelect');
+  };
+  mapList.appendChild(btn);
+});
+
+// Populate trails
+const trailList = document.getElementById('trailList');
+function populateTrails(){
+  trailList.innerHTML='';
+  selectedMap.trails.forEach(trail=>{
+    const btn = document.createElement('button');
+    btn.style.display='block';
+    btn.style.margin='0.5rem auto';
+    let color='';
+    if(trail.difficulty==='green') color='green';
+    if(trail.difficulty==='blue') color='blue';
+    if(trail.difficulty==='black') color='black';
+    btn.innerHTML=`${trail.name} <span class="trail-difficulty" style="background:${color}">${trail.difficulty}</span>`;
+    btn.onclick=()=>{
+      selectedTrail = trail;
+      startGame();
+    };
+    trailList.appendChild(btn);
+  });
+}
+
+// Show screen
+function showScreen(target){
+  document.getElementById('menu').style.display='none';
+  document.getElementById('bikeSelect').style.display='none';
+  document.getElementById('mapSelect').style.display='none';
+  document.getElementById('trailSelect').style.display='none';
+  document.getElementById('gameCanvas').style.display='none';
+  if(target==='menu') document.getElementById('menu').style.display='block';
+  if(target==='bikeSelect') document.getElementById('bikeSelect').style.display='block';
+  if(target==='mapSelect') document.getElementById('mapSelect').style.display='block';
+  if(target==='trailSelect') { document.getElementById('trailSelect').style.display='block'; populateTrails(); }
+  if(target==='game') document.getElementById('gameCanvas').style.display='block';
+}
+
+document.getElementById('startBtn').onclick=()=>showScreen('bikeSelect');
+
+// Key handling
+window.addEventListener('keydown', e=>keys[e.key]=true);
+window.addEventListener('keyup', e=>keys[e.key]=false);
+
+// Helper
+function shadeColor(color, percent){
+  const f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent;
+  const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+  const r=Math.round((t-R)*p)+R;
+  const g=Math.round((t-G)*p)+G;
+  const b=Math.round((t-B)*p)+B;
+  return `rgb(${r},${g},${b})`;
+}
+
+// Generate trail terrain and objects
+function generateTrail(){
+  const trailLength = selectedTrail.length;
+  game.terrain=[];
+  game.objects=[];
+  game.mountainSides=[];
+  game.trees=[];
+
+  for(let z=0; z<=trailLength; z+=10){
+    const height = 50 + Math.sin(z*0.01)*20 + Math.random()*10;
+    const width = 200 + Math.random()*20;
+    game.terrain.push({z,height,width,centerX:0,leftEdge:-width/2,rightEdge:width/2});
+    // Add objects
+    if(Math.random()<0.05){
+      game.objects.push({x:(Math.random()-0.5)*50,y:height,z,objType:'rock',radius:5,color:'#555'});
+    }
+    if(Math.random()<0.03){
+      game.objects.push({x:(Math.random()-0.5)*50,y:height,z,objType:'log',width:10,length:30,color:'#774411'});
+    }
+    // Trees/bushes
+    if(Math.random()<0.02) game.trees.push({x:(Math.random()-0.5)*80,y:height,z,height:20,radius:5,isBush:false});
+    if(Math.random()<0.02) game.trees.push({x:(Math.random()-0.5)*80,y:height,z,height:5,radius:5,isBush:true});
   }
-]}];
 
-// UI navigation functions (same as before)
-function startBikeSelect(){ document.getElementById('menuScreen').style.display='none';
-const grid=document.getElementById('bikeGrid'); grid.innerHTML='';
-bikes.forEach(b=>{ const btn=document.createElement('button');
-btn.innerHTML=`<div style="width:32px;height:32px;background:${b.color};border-radius:50%;margin:auto;"></div>
-<div>${b.name}</div><div>Speed:${'⭐'.repeat(Math.ceil(b.speed*3))}</div>
-<div>Handling:${'⭐'.repeat(Math.ceil(b.handling*3))}</div>
-<div>Jump:${'⭐'.repeat(Math.ceil(b.jump*3))}</div>`; btn.onclick=()=>{selectedBike=b;startMapSelect();};
-grid.appendChild(btn);});
-document.getElementById('bikeSelectScreen').style.display='block';}
+  // Finish line
+  game.objects.push({x:0,y:50,z:trailLength,objType:'finish',width:8,height:8,depth:2,color:'#FFF'});
 
-function startMapSelect(){ document.getElementById('bikeSelectScreen').style.display='none';
-const grid=document.getElementById('mapGrid'); grid.innerHTML='';
-maps.forEach(m=>{ const btn=document.createElement('button'); btn.textContent=m.name;
-btn.onclick=()=>{selectedMap=m; startTrailSelect();}; grid.appendChild(btn);});
-document.getElementById('mapSelectScreen').style.display='block';}
+  // Player
+  game.player = {x:0,y:52,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,distance:0};
+  game.crashed=false;
+  game.finished=false;
+  game.speed=0;
+  game.time=0;
+}
 
-function startTrailSelect(){ document.getElementById('mapSelectScreen').style.display='none';
-const grid=document.getElementById('trailGrid'); grid.innerHTML='';
-selectedMap.trails.forEach(t=>{ const btn=document.createElement('button');
-btn.innerHTML=`<div>${t.name} • ${t.length}m • ${t.difficulty.toUpperCase()}</div>
-<div class="trail-preview"><div class="trail-marker ${t.difficulty}" style="left:${Math.random()*80}%"></div></div>`;
-btn.onclick=()=>{selectedTrail=t; startGame();}; grid.appendChild(btn);});
-document.getElementById('trailSelectScreen').style.display='block';}
+// 3D projection
+function project3D(x,y,z){
+  const scale = 300/(z-game.player.z+50);
+  const px = canvas.width/2 + x*scale;
+  const py = canvas.height/2 - y*scale;
+  return {x:px,y:py,depth:z-game.player.z,scale};
+}
 
-function backToMenu(){ document.getElementById('bikeSelectScreen').style.display='none';
-document.getElementById('mapSelectScreen').style.display='none';
-document.getElementById('trailSelectScreen').style.display='none';
-document.getElementById('menuScreen').style.display='block';}
-function backToBikes(){ document.getElementById('mapSelectScreen').style.display='none'; document.getElementById('bikeSelectScreen').style.display='block'; }
-function backToMaps(){ document.getElementById('trailSelectScreen').style.display='none'; document.getElementById('mapSelectScreen').style.display='block'; }
+// Draw cylinder for trees/bushes
+function drawCylinder(x,y,z,radius,height,color){
+  const p = project3D(x,y,z);
+  const pTop = project3D(x,y+height,z);
+  if(!p||!pTop) return;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.ellipse(p.x,p.y,radius*p.scale,(p.y-pTop.y),0,0,Math.PI*2);
+  ctx.fill();
+}
 
-// Game state
-const game={player:{x:0,y:2,z:0,vx:0,vy:0,vz:5,rotY:0,rotVel:0,onGround:true,distance:0},crashed:false,finished:false,time:0};
+// Draw box for logs, jumps, finish
+function drawBox(x,y,z,w,h,d,color){
+  const p = project3D(x,y,z);
+  const pTop = project3D(x,y+h,z+d);
+  if(!p||!pTop) return;
+  ctx.fillStyle=color;
+  ctx.fillRect(p.x-w*p.scale/2,p.y-h*p.scale,p.scale*w,p.scale*h);
+}
 
+// Game loop
 function startGame(){
-document.getElementById('uiOverlay').style.display='none';
+  showScreen('game');
+  generateTrail();
+  function loop(){
+    if(game.crashed || game.finished){
+      if(keys['r'] || keys['R']){
+        generateTrail();
+      }
+    }
+    game.time+=0.016;
+    // Controls
+    const turnSpeed=0.03,jumpPower=12;
+    if(keys['a']||keys['A']||keys['ArrowLeft']){game.player.rotVel+=turnSpeed;game.player.vx+=0.08;}
+    if(keys['d']||keys['D']||keys['ArrowRight']){game.player.rotVel-=turnSpeed;game.player.vx-=0.08;}
+    if(keys[' '] && game.player.onGround){game.player.vy=jumpPower;game.player.onGround=false;}
 
-function project3D(x,z,y){
-  const scale=200/(z-game.player.z+50);
-  const screenX=canvas.width/2 + (x-game.player.x)*scale*50;
-  const screenY=canvas.height/2 - (y-game.player.y)*scale*50;
-  return {x:screenX,y:screenY,scale};
-}
+    // Physics
+    game.player.vz=Math.max(3,Math.min(game.player.vz,30));
+    game.player.rotY+=game.player.rotVel;
+    game.player.rotVel*=0.9;
+    game.player.vx*=0.95;
+    game.player.rotVel=Math.max(-0.05,Math.min(game.player.rotVel,0.05));
+    const moveX=Math.sin(game.player.rotY)*game.player.vz*0.016+game.player.vx*0.016;
+    const moveZ=Math.cos(game.player.rotY)*game.player.vz*0.016;
+    game.player.x+=moveX;game.player.z+=moveZ;
+    game.player.vy-=0.6;game.player.y+=game.player.vy*0.016;
 
-function gameLoop(){
-  game.time+=0.016;
+    // Terrain collision
+    const nearest = game.terrain.reduce((a,b)=>Math.abs(b.z-game.player.z)<Math.abs(a.z-game.player.z)?b:a);
+    if(game.player.y<=nearest.height+2){game.player.y=nearest.height+2;game.player.vy=0;game.player.onGround=true;}
+    else game.player.onGround=false;
 
-  // Controls
-  const turnSpeed=0.04;
-  if(keys['ArrowLeft']||keys['a']||keys['A']){game.player.rotVel+=turnSpeed;game.player.vx+=0.08*selectedBike.handling;}
-  if(keys['ArrowRight']||keys['d']||keys['D']){game.player.rotVel-=turnSpeed;game.player.vx-=0.08*selectedBike.handling;}
-  if(keys[' ']&&game.player.onGround){game.player.vy=7*selectedBike.jump;game.player.onGround=false;}
+    // Check crash
+    game.objects.forEach(o=>{
+      const dx=o.x-game.player.x, dz=o.z-game.player.z;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      if(o.objType==='rock' && dist<o.radius+1.5 && game.player.onGround) game.crashed=true;
+      if(o.objType==='log' && dist<2 && game.player.onGround) game.crashed=true;
+      if(o.objType==='finish' && game.player.z>=o.z) game.finished=true;
+    });
 
-  // Physics
-  game.player.vz = Math.max(3,Math.min(game.player.vz*selectedBike.speed,30));
-  game.player.rotY += game.player.rotVel;
-  game.player.rotVel*=0.9; game.player.vx*=0.95;
+    // Render
+    ctx.fillStyle=selectedMap.skyColor;ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  const moveX = Math.sin(game.player.rotY)*game.player.vz*0.016+game.player.vx*0.016;
-  const moveZ = Math.cos(game.player.rotY)*game.player.vz*0.016;
-  game.player.x+=moveX; game.player.z+=moveZ;
-  game.player.vy -= 0.6; game.player.y += game.player.vy*0.016;
+    // Mountains
+    ctx.fillStyle=shadeColor(selectedMap.groundColor,-40);
+    ctx.globalAlpha=0.6;
+    ctx.beginPath();
+    for(let i=0;i<canvas.width;i+=30){const h=150+Math.sin(i*0.008+game.player.z*0.01)*80;if(i===0)ctx.moveTo(i,h);else ctx.lineTo(i,h);}
+    ctx.lineTo(canvas.width,canvas.height);ctx.lineTo(0,canvas.height);ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
 
-  // Collision
-  let onGround=false;
-  const trailWidth=5;
-  if(Math.abs(game.player.x)>trailWidth) game.crashed=true;
-  selectedTrail.obstacles.forEach(o=>{
-    const dx=game.player.x-o.x; const dz=game.player.z-o.z;
-    if(Math.sqrt(dx*dx+dz*dz)<o.r) game.crashed=true;
-  });
-  selectedTrail.trees.forEach(t=>{
-    const dx=game.player.x-t.x; const dz=game.player.z-t.z;
-    if(Math.sqrt(dx*dx+dz*dz)<1) game.crashed=true;
-  });
-  selectedTrail.rocks.forEach(r=>{
-    const dx=game.player.x-r.x; const dz=game.player.z-r.z;
-    if(Math.sqrt(dx*dx+dz*dz)<r.r) game.crashed=true;
-  });
-  if(game.player.y<2){ game.player.y=2; game.player.vy=0; onGround=true; game.player.onGround=true; }
+    // Terrain
+    game.terrain.forEach(seg=>{
+      const p1=project3D(seg.leftEdge,seg.height,seg.z);
+      const p2=project3D(seg.rightEdge,seg.height,seg.z);
+      if(!p1||!p2) return;
+      ctx.fillStyle=selectedMap.groundColor;
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.lineTo(p2.x,canvas.height);ctx.lineTo(p1.x,canvas.height);ctx.closePath();ctx.fill();
+    });
 
-  // Render
-  ctx.fillStyle=selectedMap.skyColor; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle=selectedMap.groundColor; ctx.fillRect(0,canvas.height/2,canvas.width,canvas.height/2);
+    // Objects
+    game.objects.forEach(o=>{
+      if(o.objType==='rock') drawCylinder(o.x,o.y,o.z,o.radius,o.radius*1.5,o.color);
+      if(o.objType==='log') drawBox(o.x,o.y,o.z,o.width,o.width,o.length,o.color);
+    });
 
-  // Draw trail
-  ctx.strokeStyle='#654321'; ctx.lineWidth=trailWidth*20; ctx.beginPath();
-  ctx.moveTo(canvas.width/2-trailWidth*10,canvas.height/2);
-  ctx.lineTo(canvas.width/2+trailWidth*10,canvas.height);
-  ctx.stroke();
+    // Trees/bushes
+    game.trees.forEach(t=>{
+      drawCylinder(t.x,t.y,t.z,t.radius,t.height,t.isBush?'#2d5016':'#3d2817');
+    });
 
-  // Draw obstacles 3D
-  selectedTrail.obstacles.forEach(o=>{
-    const p=project3D(o.x,o.z,o.h/2);
-    ctx.fillStyle='red'; ctx.beginPath();
-    ctx.arc(p.x,p.y,10*p.scale,0,Math.PI*2); ctx.fill();
-  });
+    // HUD
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(10,10,280,90);
+    ctx.fillStyle='#fff';ctx.font='18px Arial';
+    ctx.fillText(`Distance: ${Math.floor(game.player.distance)}m / ${selectedTrail.length}m`,20,35);
+    ctx.fillText(`Speed: ${Math.floor(game.player.vz*8)} km/h`,20,60);
+    ctx.fillText(`Air: ${game.player.onGround?'NO':'YES'}`,20,85);
 
-  // Trees 3D
-  selectedTrail.trees.forEach(t=>{
-    const p=project3D(t.x,t.z,t.h/2);
-    ctx.fillStyle='green'; ctx.fillRect(p.x-5*p.scale,p.y-20*p.scale,10*p.scale,20*p.scale);
-  });
+    // Crash/Finish overlay
+    if(game.crashed){ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='red';ctx.font='60px Arial';ctx.fillText('CRASHED!',canvas.width/2-150,canvas.height/2-50);}
+    if(game.finished){ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='lime';ctx.font='60px Arial';ctx.fillText('FINISHED!',canvas.width/2-150,canvas.height/2-50);}
 
-  // Rocks 3D
-  selectedTrail.rocks.forEach(r=>{
-    const p=project3D(r.x,r.z,r.h/2);
-    ctx.fillStyle='gray'; ctx.beginPath(); ctx.ellipse(p.x,p.y,8*p.scale,6*p.scale,0,0,2*Math.PI); ctx.fill();
-  });
-
-  // HUD
-  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(10,10,280,110);
-  ctx.fillStyle='#FFF'; ctx.font='bold 18px Arial';
-  ctx.fillText(`Distance: ${Math.floor(game.player.z)}m / ${selectedTrail.length}m`,20,35);
-  ctx.fillText(`Speed: ${Math.floor(game.player.vz*8)} km/h`,20,60);
-  ctx.fillText(`Time: ${game.time.toFixed(1)}s`,20,85);
-  ctx.fillText(`Air: ${game.player.onGround?'NO':'YES'}`,20,110);
-
-  // End / crash
-  if(game.crashed || game.player.z>=selectedTrail.length){
-    ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle=game.crashed?'#FF0000':'#4CAF50';
-    ctx.font='bold 60px Arial'; ctx.fillText(game.crashed?'CRASHED!':'FINISHED!',canvas.width/2-150,canvas.height/2-40);
-    ctx.fillStyle='#FFF'; ctx.font='32px Arial';
-    ctx.fillText(`Time: ${game.time.toFixed(2)}s`,canvas.width/2-90,canvas.height/2+20);
-    ctx.font='28px Arial';
-    ctx.fillText('Press R to retry',canvas.width/2-100,canvas.height/2+70);
-    if(keys['r']||keys['R']) { game.crashed=false; game.player.x=0; game.player.y=2; game.player.z=0; game.time=0; }
-  } else requestAnimationFrame(gameLoop);
-}
-requestAnimationFrame(gameLoop);
+    animationRef=requestAnimationFrame(loop);
+  }
+  loop();
 }
 </script>
 </body>
