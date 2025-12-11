@@ -1,1128 +1,249 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mountain, Circle, Square, Diamond } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mountain Bike 3D</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    background: linear-gradient(to bottom, #4aa1f0, #3c7d1e);
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ------------------------- GAME SETUP -------------------------
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const MountainBikeGame = () => {
-  const [screen, setScreen] = useState('menu');
-  const [selectedBike, setSelectedBike] = useState(null);
-  const [selectedMap, setSelectedMap] = useState(null);
-  const [selectedTrail, setSelectedTrail] = useState(null);
-  const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const keysRef = useRef({});
-
-  const bikes = [
-    { id: 1, name: 'Cross Country', speed: 1.3, handling: 1.0, jump: 1.0, color: '#FF6B6B' },
-    { id: 2, name: 'Trail Bike', speed: 1.1, handling: 1.2, jump: 1.2, color: '#4ECDC4' },
-    { id: 3, name: 'Enduro', speed: 1.0, handling: 1.4, jump: 1.4, color: '#45B7D1' },
-    { id: 4, name: 'Downhill', speed: 0.9, handling: 1.6, jump: 1.6, color: '#F7DC6F' }
-  ];
-
-  const maps = [
-    {
-      id: 1,
-      name: 'Pine Valley',
-      skyColor: '#87CEEB',
-      groundColor: '#3d5a3d',
-      dirtColor: '#6B4423',
-      fogColor: '#B0C4DE',
-      trails: [
-        { id: 1, name: 'Easy Street', difficulty: 'green', length: 1500, features: 'gentle' },
-        { id: 2, name: 'Gentle Slope', difficulty: 'green', length: 1600, features: 'gentle' },
-        { id: 3, name: 'Twisted Path', difficulty: 'blue', length: 2000, features: 'mixed' },
-        { id: 4, name: 'Rocky Ridge', difficulty: 'blue', length: 2200, features: 'mixed' },
-        { id: 5, name: 'Death Drop', difficulty: 'black', length: 2800, features: 'extreme' },
-        { id: 6, name: 'The Gauntlet', difficulty: 'black', length: 3000, features: 'extreme' }
-      ]
+// Game state
+const game = {
+    time: 0,
+    player: {
+        x: 0,
+        y: 10,
+        z: 0,
+        vx: 0,
+        vy: 0,
+        vz: 5,
+        rotY: 0,
+        rotVel: 0,
+        onGround: true,
+        distance: 0
     },
-    {
-      id: 2,
-      name: 'Desert Peak',
-      skyColor: '#FFD700',
-      groundColor: '#8B7355',
-      dirtColor: '#CD853F',
-      fogColor: '#F4A460',
-      trails: [
-        { id: 1, name: 'Sand Cruise', difficulty: 'green', length: 1500, features: 'gentle' },
-        { id: 2, name: 'Dune Runner', difficulty: 'green', length: 1700, features: 'gentle' },
-        { id: 3, name: 'Canyon Carver', difficulty: 'blue', length: 2100, features: 'mixed' },
-        { id: 4, name: 'Mesa Madness', difficulty: 'blue', length: 2300, features: 'mixed' },
-        { id: 5, name: 'Cactus Chaos', difficulty: 'black', length: 2900, features: 'extreme' },
-        { id: 6, name: 'Scorpion Sting', difficulty: 'black', length: 3100, features: 'extreme' }
-      ]
-    },
-    {
-      id: 3,
-      name: 'Alpine Heights',
-      skyColor: '#B0E0E6',
-      groundColor: '#556B2F',
-      dirtColor: '#696969',
-      fogColor: '#D3D3D3',
-      trails: [
-        { id: 1, name: 'Beginner Bowl', difficulty: 'green', length: 1500, features: 'gentle' },
-        { id: 2, name: 'Meadow Run', difficulty: 'green', length: 1800, features: 'gentle' },
-        { id: 3, name: 'Avalanche Alley', difficulty: 'blue', length: 2200, features: 'mixed' },
-        { id: 4, name: 'Ice Breaker', difficulty: 'blue', length: 2400, features: 'mixed' },
-        { id: 5, name: 'Summit Screamer', difficulty: 'black', length: 3000, features: 'extreme' },
-        { id: 6, name: 'Widow Maker', difficulty: 'black', length: 3200, features: 'extreme' }
-      ]
-    }
-  ];
-
-  const getDifficultyColor = (diff) => {
-    if (diff === 'green') return '#4CAF50';
-    if (diff === 'blue') return '#2196F3';
-    return '#212121';
-  };
-
-  const getDifficultyIcon = (diff) => {
-    if (diff === 'green') return <Circle className="w-4 h-4" />;
-    if (diff === 'blue') return <Square className="w-4 h-4" />;
-    return <Diamond className="w-4 h-4" />;
-  };
-
-  useEffect(() => {
-    if (screen === 'playing' && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      canvas.width = 1000;
-      canvas.height = 700;
-
-      const bike = bikes.find(b => b.id === selectedBike) || bikes[0];
-      const game = {
-        player: {
-          x: 0,
-          y: 10,
-          z: 20,
-          vx: 0,
-          vy: 0,
-          vz: 8,
-          rotY: 0,
-          rotVel: 0,
-          pitch: 0,
-          onGround: false,
-          distance: 0
-        },
-        terrain: [],
-        objects: [],
-        trees: [],
-        mountainSides: [],
-        time: 0,
-        crashed: false,
-        finished: false,
-        speed: 0,
-        startTime: 0
-      };
-
-      // Generate terrain path
-      const segmentLength = 5;
-      const numSegments = Math.ceil(selectedTrail.length / segmentLength);
-      let currentHeight = 50; // Start high on mountain
-      let pathCurve = 0;
-      
-      for (let i = 0; i < numSegments; i++) {
-        const z = i * segmentLength;
-        
-        // Add curves to the path
-        if (Math.random() < 0.1) {
-          pathCurve += (Math.random() - 0.5) * 2;
-        }
-        pathCurve *= 0.95;
-        
-        const segment = {
-          z: z,
-          centerX: pathCurve,
-          width: 12, // Increased from 8
-          height: currentHeight,
-          leftEdge: pathCurve - 6, // Increased from 4
-          rightEdge: pathCurve + 6 // Increased from 4
-        };
-
-        // Descend down the mountain
-        if (i > 0) {
-          // Always descending
-          if (selectedTrail.features === 'extreme') {
-            currentHeight -= 0.3 + Math.random() * 0.4;
-          } else if (selectedTrail.features === 'mixed') {
-            currentHeight -= 0.2 + Math.random() * 0.3;
-          } else {
-            currentHeight -= 0.15 + Math.random() * 0.2;
-          }
-        }
-
-        game.terrain.push(segment);
-
-        // Add mountain sides (terrain on both sides of trail)
-        for (let side = -1; side <= 1; side += 2) {
-          for (let offset = 1; offset <= 8; offset++) {
-            const sideX = pathCurve + side * (4 + offset * 3);
-            const sideHeight = currentHeight + (offset * 0.5) + (Math.random() - 0.5) * 2;
-            game.mountainSides.push({
-              x: sideX,
-              y: sideHeight,
-              z: z,
-              size: 3
-            });
-          }
-        }
-
-        // Add trees on the mountain sides - properly placed on terrain
-        if (i % 2 === 0 && i > 5) {
-          // Place trees on the mountain sides
-          const side = Math.random() < 0.5 ? -1 : 1;
-          const treeOffset = 8 + Math.random() * 15;
-          const treeX = pathCurve + side * treeOffset;
-          
-          // Calculate ground height at tree position (slopes up from trail)
-          const treeGroundHeight = currentHeight + (treeOffset - 8) * 0.5 + (Math.random() - 0.5) * 3;
-          
-          game.trees.push({
-            x: treeX,
-            y: treeGroundHeight,
-            z: z,
-            height: 15 + Math.random() * 10,
-            radius: 1.5 + Math.random() * 0.8
-          });
-          
-          // Add bushes near trees on the mountain slope
-          if (Math.random() < 0.6) {
-            const bushOffset = treeOffset + (Math.random() - 0.5) * 4;
-            const bushX = pathCurve + side * bushOffset;
-            const bushGroundHeight = currentHeight + (bushOffset - 8) * 0.5 + (Math.random() - 0.5) * 2;
-            
-            game.trees.push({
-              x: bushX,
-              y: bushGroundHeight,
-              z: z + (Math.random() - 0.5) * 8,
-              height: 2 + Math.random() * 2,
-              radius: 1 + Math.random() * 0.5,
-              isBush: true
-            });
-          }
-        }
-
-        // Add objects (rocks, logs, jumps, drops)
-        if (i > 10 && Math.random() < 0.15) {
-          const objType = Math.random();
-          let obj;
-
-          if (objType < 0.25 && selectedTrail.features !== 'gentle') {
-            // Jump
-            obj = {
-              type: 'jump',
-              x: pathCurve + (Math.random() - 0.5) * 3,
-              y: currentHeight,
-              z: z,
-              width: 6,
-              height: 1.5,
-              depth: 6,
-              color: '#8B4513'
-            };
-          } else if (objType < 0.4 && selectedTrail.features === 'extreme') {
-            // Drop
-            const dropHeight = 3 + Math.random() * 4;
-            obj = {
-              type: 'drop',
-              x: pathCurve,
-              y: currentHeight - dropHeight,
-              z: z,
-              width: 8,
-              height: dropHeight,
-              depth: 8,
-              color: '#654321'
-            };
-            currentHeight -= dropHeight;
-            for (let j = 0; j < 3; j++) {
-              if (game.terrain[i + j]) {
-                game.terrain[i + j].height = currentHeight;
-              }
-            }
-          } else if (objType < 0.7) {
-            // Rock - can ride around
-            obj = {
-              type: 'rock',
-              x: pathCurve + (Math.random() - 0.5) * 5,
-              y: currentHeight,
-              z: z,
-              radius: 1 + Math.random() * 0.8,
-              color: '#666'
-            };
-          } else {
-            // Log - can ride around
-            obj = {
-              type: 'log',
-              x: pathCurve + (Math.random() - 0.5) * 5,
-              y: currentHeight,
-              z: z,
-              width: 0.6,
-              length: 3,
-              color: '#5D4037'
-            };
-          }
-          
-          game.objects.push(obj);
-        }
-      }
-
-      // Add finish line
-      game.objects.push({
-        type: 'finish',
-        x: pathCurve,
-        y: currentHeight,
-        z: selectedTrail.length - 20,
-        width: 8,
-        height: 8,
-        depth: 1
-      });
-
-      const handleKeyDown = (e) => { 
-        keysRef.current[e.key] = true;
-        if (e.key === 'r' || e.key === 'R') {
-          if (game.crashed || game.finished) {
-            setScreen('trail-select');
-          }
-        }
-      };
-      const handleKeyUp = (e) => { keysRef.current[e.key] = false; };
-      
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-
-      const getTerrainAt = (x, z) => {
-        let closestSeg = null;
-        let minDist = Infinity;
-        
-        for (let seg of game.terrain) {
-          const dist = Math.abs(seg.z - z);
-          if (dist < minDist) {
-            minDist = dist;
-            closestSeg = seg;
-          }
-        }
-        
-        if (!closestSeg) return { height: 0, onTrack: false };
-        
-        const onTrack = x >= closestSeg.leftEdge && x <= closestSeg.rightEdge;
-        return { height: closestSeg.height, onTrack, centerX: closestSeg.centerX };
-      };
-
-      const project3D = (x, y, z) => {
-        const fov = 400;
-        const dx = x - game.player.x;
-        const dy = y - game.player.y;
-        const dz = z - game.player.z;
-        
-        // Rotate by player rotation
-        const rotatedX = dx * Math.cos(-game.player.rotY) - dz * Math.sin(-game.player.rotY);
-        const rotatedZ = dx * Math.sin(-game.player.rotY) + dz * Math.cos(-game.player.rotY);
-        
-        if (rotatedZ <= 0.1) return null;
-        
-        const scale = fov / rotatedZ;
-        return {
-          x: canvas.width / 2 + rotatedX * scale,
-          y: canvas.height / 2 - (dy - 2) * scale,
-          scale: scale,
-          depth: rotatedZ
-        };
-      };
-
-      const drawCylinder = (x, y, z, radius, height, color) => {
-        const topProj = project3D(x, y + height, z);
-        const bottomProj = project3D(x, y, z);
-        
-        if (!topProj || !bottomProj) return;
-        
-        const topRadius = radius * topProj.scale;
-        const bottomRadius = radius * bottomProj.scale;
-        
-        // Draw cylinder
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.ellipse(bottomProj.x, bottomProj.y, bottomRadius, bottomRadius * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = shadeColor(color, -20);
-        ctx.beginPath();
-        ctx.moveTo(bottomProj.x - bottomRadius, bottomProj.y);
-        ctx.lineTo(topProj.x - topRadius, topProj.y);
-        ctx.lineTo(topProj.x + topRadius, topProj.y);
-        ctx.lineTo(bottomProj.x + bottomRadius, bottomProj.y);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = shadeColor(color, 20);
-        ctx.beginPath();
-        ctx.ellipse(topProj.x, topProj.y, topRadius, topRadius * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-      };
-
-      const drawBox = (x, y, z, w, h, d, color) => {
-        const corners = [
-          [x - w/2, y, z - d/2], [x + w/2, y, z - d/2],
-          [x + w/2, y, z + d/2], [x - w/2, y, z + d/2],
-          [x - w/2, y + h, z - d/2], [x + w/2, y + h, z - d/2],
-          [x + w/2, y + h, z + d/2], [x - w/2, y + h, z + d/2]
-        ];
-
-        const projected = corners.map(c => project3D(c[0], c[1], c[2])).filter(p => p);
-        if (projected.length < 4) return;
-
-        const faces = [
-          [4, 5, 6, 7, shadeColor(color, 20)],  // Top
-          [2, 3, 7, 6, shadeColor(color, 0)],   // Front
-          [1, 2, 6, 5, shadeColor(color, -20)], // Right
-          [0, 1, 5, 4, shadeColor(color, -40)]  // Left
-        ];
-
-        faces.forEach(face => {
-          if (projected[face[0]] && projected[face[1]] && projected[face[2]] && projected[face[3]]) {
-            ctx.fillStyle = face[4];
-            ctx.beginPath();
-            ctx.moveTo(projected[face[0]].x, projected[face[0]].y);
-            ctx.lineTo(projected[face[1]].x, projected[face[1]].y);
-            ctx.lineTo(projected[face[2]].x, projected[face[2]].y);
-            ctx.lineTo(projected[face[3]].x, projected[face[3]].y);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        });
-      };
-
-      const shadeColor = (color, percent) => {
-        const num = parseInt(color.replace("#",""), 16);
-        const amt = Math.round(2.55 * percent);
-        const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-        const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
-        const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
-        return "#" + ((R << 16) | (G << 8) | B).toString(16).padStart(6, '0');
-      };
-
-      const gameLoop = () => {
-        if (game.crashed || game.finished) {
-          return;
-        }
-
-        // Wait 1 second before starting to prevent immediate crash
-        if (game.time < 1.0) {
-          game.time += 0.016;
-          
-          // Still render during countdown
-          ctx.fillStyle = selectedMap.skyColor;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw distant mountains
-          ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
-          ctx.beginPath();
-          for (let i = 0; i < canvas.width; i += 50) {
-            const height = 200 + Math.sin(i * 0.01) * 100;
-            if (i === 0) ctx.moveTo(i, height);
-            else ctx.lineTo(i, height);
-          }
-          ctx.lineTo(canvas.width, canvas.height);
-          ctx.lineTo(0, canvas.height);
-          ctx.closePath();
-          ctx.fill();
-          
-          ctx.fillStyle = 'rgba(0,0,0,0.7)';
-          ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 50, 300, 100);
-          ctx.fillStyle = '#FFF';
-          ctx.font = 'bold 48px Arial';
-          const countdown = Math.ceil(1.0 - game.time);
-          ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width/2 - 30, canvas.height/2 + 15);
-          
-          animationRef.current = requestAnimationFrame(gameLoop);
-          return;
-        }
-
-        game.time += 0.016;
-        const keys = keysRef.current;
-
-        // ---------------------------
-        // Controls & Physics (fixed)
-        // - Movement now follows player rotation
-        // - Turning sensitivity reduced and smoothed
-        // - Small lateral lean applied when steering
-        // ---------------------------
-        const accel = 0.22 * bike.speed;               // forward acceleration (tuned down)
-        const turnSpeed = 0.003 * bike.handling;      // much less sensitive turn
-        const jumpPower = 10 * bike.jump;
-
-        // Compute forward direction from rotation
-        const forwardX = Math.sin(game.player.rotY);
-        const forwardZ = Math.cos(game.player.rotY);
-
-        // Steering input (-1 left, +1 right)
-        let steer = 0;
-        if (keys['ArrowLeft'] || keys['a'] || keys['A']) steer -= 1;
-        if (keys['ArrowRight'] || keys['d'] || keys['D']) steer += 1;
-
-        // Apply turning to rotation velocity (smoothed)
-        game.player.rotVel += steer * turnSpeed;
-
-        // Small lateral "lean" / slide effect when steering
-        // This nudges vx a tiny bit in the lateral direction (based on heading)
-        if (steer !== 0) {
-          // lateral direction is perpendicular to forward vector
-          const lateralX = Math.cos(game.player.rotY);
-          const lateralZ = -Math.sin(game.player.rotY);
-          const leanStrength = 0.02 * Math.abs(steer);
-          game.player.vx += lateralX * leanStrength * -steer;
-          game.player.vz += lateralZ * leanStrength * -steer;
-        }
-
-        // Forward / backward: accelerate along forward vector
-        if (keys['ArrowUp'] || keys['w'] || keys['W']) {
-          game.player.vx += forwardX * accel;
-          game.player.vz += forwardZ * accel;
-        }
-        if (keys['ArrowDown'] || keys['s'] || keys['S']) {
-          game.player.vx -= forwardX * (accel * 0.5);
-          game.player.vz -= forwardZ * (accel * 0.5);
-        }
-
-        // Jump
-        if (keys[' '] && game.player.onGround) {
-          game.player.vy = jumpPower;
-          game.player.onGround = false;
-        }
-
-        // Physics: clamp forward speed magnitude (approx)
-        const forwardSpeed = Math.sqrt(game.player.vx * game.player.vx + game.player.vz * game.player.vz);
-        const maxSpeed = 30;
-        if (forwardSpeed > maxSpeed) {
-          const s = maxSpeed / forwardSpeed;
-          game.player.vx *= s;
-          game.player.vz *= s;
-        }
-
-        // Rotation integration and smoothing
-        // Limit rotation rate and damp for smoother feel
-        game.player.rotVel = Math.max(-0.03, Math.min(game.player.rotVel, 0.03));
-        game.player.rotY += game.player.rotVel;
-        game.player.rotVel *= 0.88; // stronger damping for responsive smoothing
-
-        // Velocity damping (simulate friction)
-        game.player.vx *= 0.985;
-        game.player.vz *= 0.995;
-
-        // Movement (apply velocities)
-        const moveX = game.player.vx * 0.016;
-        const moveZ = game.player.vz * 0.016;
-
-        game.player.x += moveX;
-        game.player.z += moveZ;
-
-        // Gravity
-        game.player.vy -= 0.6;
-        game.player.y += game.player.vy * 0.016;
-
-        // ---------------------------
-        // End Controls & Physics
-        // ---------------------------
-
-        const terrainInfo = getTerrainAt(game.player.x, game.player.z);
-        
-        if (game.player.y <= terrainInfo.height + 2) {
-          game.player.y = terrainInfo.height + 2;
-          
-          if (game.player.vy < -12) {
-            game.crashed = true;
-          }
-          
-          game.player.vy = 0;
-          game.player.onGround = true;
-        } else {
-          game.player.onGround = false;
-        }
-
-        // Check off track
-        if (!terrainInfo.onTrack && game.player.onGround) {
-          game.crashed = true;
-        }
-
-        // Collision with objects
-        game.objects.forEach(obj => {
-          const dx = obj.x - game.player.x;
-          const dz = obj.z - game.player.z;
-          const dist = Math.sqrt(dx * dx + dz * dz);
-          
-          if (obj.type === 'rock' && dist < obj.radius + 1.5) {
-            if (game.player.onGround) {
-              game.crashed = true;
-            }
-          } else if (obj.type === 'log' && dist < 2) {
-            if (game.player.onGround) {
-              game.crashed = true;
-            }
-          } else if (obj.type === 'finish' && game.player.z >= obj.z) {
-            game.finished = true;
-          }
-        });
-
-        game.player.distance = game.player.z;
-        game.speed = Math.sqrt(game.player.vx * game.player.vx + game.player.vz * game.player.vz);
-
-        // Render
-        ctx.fillStyle = selectedMap.skyColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw distant mountains in background
-        ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        for (let i = 0; i < canvas.width; i += 30) {
-          const height = 150 + Math.sin(i * 0.008 + game.player.z * 0.01) * 80;
-          if (i === 0) ctx.moveTo(i, height);
-          else ctx.lineTo(i, height);
-        }
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-
-        // Draw middle distance mountains
-        ctx.fillStyle = shadeColor(selectedMap.groundColor, -20);
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        for (let i = 0; i < canvas.width; i += 40) {
-          const height = 250 + Math.sin(i * 0.012 + game.player.z * 0.015) * 60;
-          if (i === 0) ctx.moveTo(i, height);
-          else ctx.lineTo(i, height);
-        }
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-
-        // Collect and sort objects by depth
-        const renderQueue = [];
-
-        // Add mountain sides (terrain slopes)
-        game.mountainSides.forEach(side => {
-          if (side.z > game.player.z - 20 && side.z < game.player.z + 150) {
-            const p = project3D(side.x, side.y, side.z);
-            if (p) {
-              renderQueue.push({ depth: p.depth, fn: () => {
-                const terrainColor = selectedMap.groundColor;
-                ctx.fillStyle = shadeColor(terrainColor, -10 - (Math.abs(side.x) * 2));
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, side.size * p.scale, 0, Math.PI * 2);
-                ctx.fill();
-              }});
-            }
-          }
-        });
-
-        // Add trees
-        game.trees.forEach(tree => {
-          if (tree.z > game.player.z - 20 && tree.z < game.player.z + 150) {
-            const p = project3D(tree.x, tree.y, tree.z);
-            if (p) {
-              renderQueue.push({ depth: p.depth, fn: () => {
-                if (tree.isBush) {
-                  // Draw bushes
-                  drawCylinder(tree.x, tree.y, tree.z, tree.radius, tree.height, '#2d5016');
-                } else {
-                  // Draw tree trunk with texture
-                  const trunkColor = '#3d2817';
-                  drawCylinder(tree.x, tree.y, tree.z, tree.radius * 0.6, tree.height * 0.3, trunkColor);
-                  
-                  // Draw foliage in layers for depth
-                  const foliageColor = '#2d5016';
-                  const layers = 3;
-                  for (let i = 0; i < layers; i++) {
-                    const layerHeight = tree.height * 0.3 + (i * tree.height * 0.23);
-                    const layerRadius = tree.radius * (1.8 - i * 0.3);
-                    drawCylinder(tree.x, tree.y + layerHeight, tree.z, layerRadius, tree.height * 0.23, 
-                                shadeColor(foliageColor, i * 10));
-                  }
-                }
-              }});
-            }
-          }
-        });
-
-        // Add terrain segments
-        for (let i = 0; i < game.terrain.length - 1; i++) {
-          const seg = game.terrain[i];
-          const nextSeg = game.terrain[i + 1];
-
-          if (seg.z > game.player.z - 10 && seg.z < game.player.z + 150) {
-            const p = project3D(seg.centerX, seg.height, seg.z);
-            if (p) {
-              renderQueue.push({ depth: p.depth, fn: () => {
-                // Draw track segment as quad
-                const p1 = project3D(seg.leftEdge, seg.height, seg.z);
-                const p2 = project3D(seg.rightEdge, seg.height, seg.z);
-                const p3 = project3D(nextSeg.rightEdge, nextSeg.height, nextSeg.z);
-                const p4 = project3D(nextSeg.leftEdge, nextSeg.height, nextSeg.z);
-
-                if (p1 && p2 && p3 && p4) {
-                  // Draw dirt with gradient
-                  const dirtGrad = ctx.createLinearGradient(p1.x, p1.y, p3.x, p3.y);
-                  dirtGrad.addColorStop(0, selectedMap.dirtColor);
-                  dirtGrad.addColorStop(0.5, shadeColor(selectedMap.dirtColor, -10));
-                  dirtGrad.addColorStop(1, shadeColor(selectedMap.dirtColor, 10));
-                  ctx.fillStyle = dirtGrad;
-                  ctx.beginPath();
-                  ctx.moveTo(p1.x, p1.y);
-                  ctx.lineTo(p2.x, p2.y);
-                  ctx.lineTo(p3.x, p3.y);
-                  ctx.lineTo(p4.x, p4.y);
-                  ctx.closePath();
-                  ctx.fill();
-                  
-                  // Add tire tracks for realism
-                  if (i % 2 === 0) {
-                    ctx.strokeStyle = shadeColor(selectedMap.dirtColor, -20);
-                    ctx.lineWidth = 1;
-                    const trackOffset = seg.width * 0.2;
-                    const pLeft1 = project3D(seg.centerX - trackOffset, seg.height, seg.z);
-                    const pLeft2 = project3D(nextSeg.centerX - trackOffset, nextSeg.height, nextSeg.z);
-                    const pRight1 = project3D(seg.centerX + trackOffset, seg.height, seg.z);
-                    const pRight2 = project3D(nextSeg.centerX + trackOffset, nextSeg.height, nextSeg.z);
-                    
-                    if (pLeft1 && pLeft2) {
-                      ctx.beginPath();
-                      ctx.moveTo(pLeft1.x, pLeft1.y);
-                      ctx.lineTo(pLeft2.x, pLeft2.y);
-                      ctx.stroke();
-                    }
-                    if (pRight1 && pRight2) {
-                      ctx.beginPath();
-                      ctx.moveTo(pRight1.x, pRight1.y);
-                      ctx.lineTo(pRight2.x, pRight2.y);
-                      ctx.stroke();
-                    }
-                  }
-
-                  // Draw track edges with grass
-                  ctx.strokeStyle = '#1a3d0a';
-                  ctx.lineWidth = 3;
-                  ctx.beginPath();
-                  ctx.moveTo(p1.x, p1.y);
-                  ctx.lineTo(p4.x, p4.y);
-                  ctx.stroke();
-                  ctx.beginPath();
-                  ctx.moveTo(p2.x, p2.y);
-                  ctx.lineTo(p3.x, p3.y);
-                  ctx.stroke();
-                }
-              }});
-            }
-          }
-        }
-
-        // Add objects
-        game.objects.forEach(obj => {
-          if (obj.z > game.player.z - 5 && obj.z < game.player.z + 150) {
-            const p = project3D(obj.x, obj.y, obj.z);
-            if (p) {
-              renderQueue.push({ depth: p.depth, fn: () => {
-                if (obj.type === 'rock') {
-                  const topP = project3D(obj.x, obj.y + obj.radius, obj.z);
-                  if (topP) {
-                    const size = obj.radius * topP.scale;
-                    ctx.fillStyle = obj.color;
-                    ctx.beginPath();
-                    ctx.arc(topP.x, topP.y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                  }
-                } else if (obj.type === 'log') {
-                  drawBox(obj.x, obj.y, obj.z, obj.width, obj.width, obj.length, obj.color);
-                } else if (obj.type === 'jump') {
-                  drawBox(obj.x, obj.y, obj.z, obj.width, obj.height, obj.depth, obj.color);
-                } else if (obj.type === 'finish') {
-                  for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                      const color = (i + j) % 2 === 0 ? '#FFF' : '#000';
-                      drawBox(obj.x - 4 + i * 2, obj.y + j * 2, obj.z, 2, 2, obj.depth, color);
-                    }
-                  }
-                }
-              }});
-            }
-          }
-        });
-
-        // Sort by depth (far to near)
-        renderQueue.sort((a, b) => b.depth - a.depth);
-        renderQueue.forEach(item => item.fn());
-
-        // Draw bike from first person - front wheel, fork, and handlebars
-        const wheelRadius = 50;
-        const wheelY = canvas.height - 60;
-        
-        // Fork legs - angled for realism
-        const forkGrad = ctx.createLinearGradient(canvas.width/2 - 30, 0, canvas.width/2 + 30, 0);
-        forkGrad.addColorStop(0, '#2a2a2a');
-        forkGrad.addColorStop(0.5, '#4a4a4a');
-        forkGrad.addColorStop(1, '#2a2a2a');
-        ctx.fillStyle = forkGrad;
-        
-        // Left fork leg
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - 30, canvas.height - 180);
-        ctx.lineTo(canvas.width/2 - 22, wheelY - 50);
-        ctx.lineTo(canvas.width/2 - 15, wheelY - 50);
-        ctx.lineTo(canvas.width/2 - 20, canvas.height - 180);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Right fork leg
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 + 30, canvas.height - 180);
-        ctx.lineTo(canvas.width/2 + 22, wheelY - 50);
-        ctx.lineTo(canvas.width/2 + 15, wheelY - 50);
-        ctx.lineTo(canvas.width/2 + 20, canvas.height - 180);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Fork crown (connects the legs)
-        ctx.fillStyle = '#3a3a3a';
-        ctx.fillRect(canvas.width/2 - 35, canvas.height - 185, 70, 12);
-        
-        // Stem (connects fork to handlebars)
-        ctx.fillStyle = '#333';
-        ctx.fillRect(canvas.width/2 - 15, canvas.height - 220, 30, 40);
-        
-        // Front wheel - with 3D effect
-        const wheelGrad = ctx.createRadialGradient(canvas.width/2, wheelY, 0, canvas.width/2, wheelY, wheelRadius);
-        wheelGrad.addColorStop(0, '#1a1a1a');
-        wheelGrad.addColorStop(0.7, '#0a0a0a');
-        wheelGrad.addColorStop(1, '#000');
-        ctx.fillStyle = wheelGrad;
-        ctx.beginPath();
-        ctx.ellipse(canvas.width/2, wheelY, wheelRadius, wheelRadius * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Tire sidewall
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.ellipse(canvas.width/2, wheelY, wheelRadius - 3, (wheelRadius * 0.25) - 1, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Tire tread pattern
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 10;
-        ctx.beginPath();
-        ctx.ellipse(canvas.width/2, wheelY, wheelRadius - 8, (wheelRadius * 0.25) - 3, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Inner tread details
-        for (let i = 0; i < 12; i++) {
-          const angle = (i / 12) * Math.PI * 2 + game.time * 8;
-          ctx.strokeStyle = '#333';
-          ctx.lineWidth = 2;
-          const r1 = wheelRadius - 15;
-          const r2 = wheelRadius - 5;
-          const x1 = canvas.width/2 + Math.cos(angle) * r1;
-          const y1 = wheelY + Math.sin(angle) * r1 * 0.25;
-          const x2 = canvas.width/2 + Math.cos(angle) * r2;
-          const y2 = wheelY + Math.sin(angle) * r2 * 0.25;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
-        }
-        
-        // Wheel spokes (rotating)
-        ctx.strokeStyle = '#555';
-        ctx.lineWidth = 1.5;
-        for (let i = 0; i < 16; i++) {
-          const angle = (i / 16) * Math.PI * 2 + game.time * 8;
-          const x1 = canvas.width/2 + Math.cos(angle) * 8;
-          const y1 = wheelY + Math.sin(angle) * 2;
-          const x2 = canvas.width/2 + Math.cos(angle) * (wheelRadius - 15);
-          const y2 = wheelY + Math.sin(angle) * ((wheelRadius * 0.25) - 4);
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
-        }
-        
-        // Hub (center of wheel)
-        ctx.fillStyle = '#666';
-        ctx.beginPath();
-        ctx.ellipse(canvas.width/2, wheelY, 10, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Quick release skewer
-        ctx.fillStyle = '#888';
-        ctx.beginPath();
-        ctx.ellipse(canvas.width/2, wheelY, 12, 3.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Handlebars - more realistic mountain bike bars
-        const barWidth = 380;
-        const barY = canvas.height - 140;
-        const gripSize = 40;
-        const gripHeight = 100;
-        
-        // Bar extensions (from stem to grips)
-        ctx.strokeStyle = bike.color;
-        ctx.lineWidth = 10;
-        ctx.lineCap = 'round';
-        
-        // Left bar
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - 20, barY - 20);
-        ctx.quadraticCurveTo(canvas.width/2 - 100, barY - 10, canvas.width/2 - barWidth/2 - 10, barY + 30);
-        ctx.stroke();
-        
-        // Right bar
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 + 20, barY - 20);
-        ctx.quadraticCurveTo(canvas.width/2 + 100, barY - 10, canvas.width/2 + barWidth/2 + 10, barY + 30);
-        ctx.stroke();
-        
-        // Left grip with rubber texture
-        const leftGrad = ctx.createLinearGradient(canvas.width/2 - barWidth/2 - gripSize, 0, canvas.width/2 - barWidth/2, 0);
-        leftGrad.addColorStop(0, '#1a1a1a');
-        leftGrad.addColorStop(0.5, '#2a2a2a');
-        leftGrad.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = leftGrad;
-        ctx.fillRect(canvas.width/2 - barWidth/2 - gripSize, barY, gripSize, gripHeight);
-        
-        // Left grip pattern (rubber texture)
-        ctx.fillStyle = '#0a0a0a';
-        for (let i = 0; i < 12; i++) {
-          ctx.fillRect(canvas.width/2 - barWidth/2 - gripSize + 3, barY + i * 8, gripSize - 6, 3);
-        }
-        
-        // Left brake lever
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - barWidth/2 - 10, barY + 15);
-        ctx.lineTo(canvas.width/2 - barWidth/2 + 25, barY + 18);
-        ctx.lineTo(canvas.width/2 - barWidth/2 + 25, barY + 25);
-        ctx.lineTo(canvas.width/2 - barWidth/2 - 10, barY + 22);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Right grip with rubber texture
-        const rightGrad = ctx.createLinearGradient(canvas.width/2 + barWidth/2, 0, canvas.width/2 + barWidth/2 + gripSize, 0);
-        rightGrad.addColorStop(0, '#1a1a1a');
-        rightGrad.addColorStop(0.5, '#2a2a2a');
-        rightGrad.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = rightGrad;
-        ctx.fillRect(canvas.width/2 + barWidth/2, barY, gripSize, gripHeight);
-        
-        // Right grip pattern
-        ctx.fillStyle = '#0a0a0a';
-        for (let i = 0; i < 12; i++) {
-          ctx.fillRect(canvas.width/2 + barWidth/2 + 3, barY + i * 8, gripSize - 6, 3);
-        }
-        
-        // Right brake lever
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 + barWidth/2 + 10, barY + 15);
-        ctx.lineTo(canvas.width/2 + barWidth/2 - 25, barY + 18);
-        ctx.lineTo(canvas.width/2 + barWidth/2 - 25, barY + 25);
-        ctx.lineTo(canvas.width/2 + barWidth/2 + 10, barY + 22);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Bar end caps
-        ctx.fillStyle = '#111';
-        ctx.beginPath();
-        ctx.arc(canvas.width/2 - barWidth/2 - gripSize/2, barY + gripHeight/2, 8, 0, Math.PI * 2);
-        ctx.arc(canvas.width/2 + barWidth/2 + gripSize/2, barY + gripHeight/2, 8, 0, Math.PI * 2);
-        ctx.fill();
-
-        // UI
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(10, 10, 280, 145);
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText(`Distance: ${Math.floor(game.player.distance)}m / ${selectedTrail.length}m`, 20, 35);
-        ctx.fillText(`Speed: ${Math.floor(game.speed * 8)} km/h`, 20, 60);
-        ctx.fillText(`Time: ${(game.time - 1.0).toFixed(1)}s`, 20, 85);
-        ctx.fillText(`Air: ${game.player.onGround ? 'NO' : 'YES'}`, 20, 110);
-        
-        // Timer display (larger, prominent)
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(canvas.width - 160, 10, 150, 60);
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 32px Arial';
-        ctx.fillText(`${(game.time - 1.0).toFixed(2)}s`, canvas.width - 145, 50);
-
-        if (game.crashed) {
-          ctx.fillStyle = 'rgba(0,0,0,0.8)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#FF0000';
-          ctx.font = 'bold 60px Arial';
-          ctx.fillText('CRASHED!', canvas.width/2 - 150, canvas.height/2 - 50);
-          ctx.fillStyle = '#FFF';
-          ctx.font = '32px Arial';
-          ctx.fillText(`Survived: ${(game.time - 1.0).toFixed(2)}s`, canvas.width/2 - 110, canvas.height/2 + 10);
-          ctx.font = '28px Arial';
-          ctx.fillText('Press R to retry', canvas.width/2 - 100, canvas.height/2 + 60);
-        }
-
-        if (game.finished) {
-          ctx.fillStyle = 'rgba(0,0,0,0.8)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#4CAF50';
-          ctx.font = 'bold 60px Arial';
-          ctx.fillText('FINISHED!', canvas.width/2 - 150, canvas.height/2 - 40);
-          ctx.fillStyle = '#FFF';
-          ctx.font = '32px Arial';
-          ctx.fillText(`Time: ${(game.time - 1.0).toFixed(2)}s`, canvas.width/2 - 90, canvas.height/2 + 20);
-          ctx.font = '28px Arial';
-          ctx.fillText('Press R to retry', canvas.width/2 - 100, canvas.height/2 + 70);
-        }
-
-        animationRef.current = requestAnimationFrame(gameLoop);
-      };
-
-      gameLoop();
-
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
-        cancelAnimationFrame(animationRef.current);
-      };
-    }
-  }, [screen, selectedBike, selectedMap, selectedTrail]);
-
-  return (
-    <div className="w-full h-screen bg-gradient-to-b from-blue-400 to-green-600 flex items-center justify-center">
-      {screen === 'menu' && (
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-          <div className="flex items-center justify-center mb-6">
-            <Mountain className="w-16 h-16 text-green-600 mr-3" />
-            <h1 className="text-4xl font-bold text-gray-800">Mountain Bike 3D</h1>
-          </div>
-          <p className="text-center text-gray-600 mb-8">Ride the mountain trails in first person!</p>
-          <button
-            onClick={() => setScreen('bike-select')}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition-colors"
-          >
-            Start Game
-          </button>
-        </div>
-      )}
-
-      {screen === 'bike-select' && (
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Select Your Bike</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {bikes.map(bike => (
-              <button
-                key={bike.id}
-                onClick={() => {
-                  setSelectedBike(bike.id);
-                  setScreen('map-select');
-                }}
-                className="border-4 border-gray-300 hover:border-green-600 rounded-lg p-6 transition-all"
-              >
-                <div className="w-full h-20 flex items-center justify-center mb-3">
-                  <div style={{ backgroundColor: bike.color }} className="w-16 h-16 rounded-full"></div>
-                </div>
-                <h3 className="font-bold text-lg mb-2">{bike.name}</h3>
-                <div className="text-sm text-gray-600">
-                  <div>Speed: {'⭐'.repeat(Math.ceil(bike.speed * 3))}</div>
-                  <div>Handling: {'⭐'.repeat(Math.ceil(bike.handling * 3))}</div>
-                  <div>Jump: {'⭐'.repeat(Math.ceil(bike.jump * 3))}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {screen === 'map-select' && (
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Select Your Mountain</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {maps.map(map => (
-              <button
-                key={map.id}
-                onClick={() => {
-                  setSelectedMap(map);
-                  setScreen('trail-select');
-                }}
-                className="border-4 border-gray-300 hover:border-green-600 rounded-lg p-6 transition-all flex items-center"
-              >
-                <Mountain className="w-12 h-12 mr-4" style={{ color: map.groundColor }} />
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-xl mb-1">{map.name}</h3>
-                  <p className="text-gray-600 text-sm">{map.trails.length} trails available</p>
-                </div>
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setScreen('bike-select')}
-            className="w-full mt-6 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            Back to Bikes
-          </button>
-        </div>
-      )}
-
-      {screen === 'trail-select' && (
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-3xl w-full max-h-screen overflow-y-auto">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">{selectedMap.name}</h2>
-          <p className="text-center text-gray-600 mb-6">Select a trail to ride</p>
-          <div className="grid grid-cols-1 gap-3">
-            {selectedMap.trails.map(trail => (
-              <button
-                key={trail.id}
-                onClick={() => {
-                  setSelectedTrail(trail);
-                  setScreen('playing');
-                }}
-                className="border-3 border-gray-300 hover:border-green-600 rounded-lg p-4 transition-all flex items-center"
-              >
-                <div className="mr-4" style={{ color: getDifficultyColor(trail.difficulty) }}>
-                  {getDifficultyIcon(trail.difficulty)}
-                </div>
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-lg">{trail.name}</h3>
-                  <p className="text-gray-600 text-sm">
-                    {trail.length}m • {trail.features} features
-                  </p>
-                </div>
-                <div className="text-sm font-semibold px-3 py-1 rounded" 
-                     style={{ backgroundColor: getDifficultyColor(trail.difficulty), color: 'white' }}>
-                  {trail.difficulty.toUpperCase()}
-                </div>
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setScreen('map-select')}
-            className="w-full mt-6 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            Back to Maps
-          </button>
-        </div>
-      )}
-
-      {screen === 'playing' && (
-        <div className="flex flex-col items-center">
-          <canvas ref={canvasRef} className="border-4 border-gray-800 rounded-lg shadow-2xl" />
-          <div className="mt-4 bg-white rounded-lg p-4 shadow-lg">
-            <p className="text-center font-bold text-gray-800">
-              WASD/Arrows: Steer & Speed • Space: Jump • R: Retry
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    crashed: false,
+    finished: false,
+    speed: 0,
+    objects: [],
+    terrain: [],
+    mountainSides: [],
+    trees: []
 };
 
-export default MountainBikeGame;
+// ------------------------- UTILITIES -------------------------
+function shadeColor(color, percent) {
+    const f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent;
+    const R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+    return "#" + (0x1000000 + (Math.round((t-R)*p)+R)*0x10000 + (Math.round((t-G)*p)+G)*0x100 + (Math.round((t-B)*p)+B)).toString(16).slice(1);
+}
+function project3D(x,y,z) {
+    const scale = 500 / (z - game.player.z + 500);
+    const px = canvas.width/2 + (x - game.player.x) * scale;
+    const py = canvas.height/2 - (y - game.player.y) * scale;
+    return {x:px, y:py, depth:z};
+}
+
+// ------------------------- TERRAIN -------------------------
+const trackLength = 1000;
+for(let i=0;i<trackLength;i++){
+    const height = Math.sin(i*0.05)*20;
+    game.terrain.push({
+        z:i*5,
+        height: height,
+        width: 20,
+        leftEdge: -10,
+        rightEdge: 10,
+        centerX: 0
+    });
+}
+
+// ------------------------- OBJECTS -------------------------
+game.objects.push({type:'rock', x:2, y:0, z:100, radius:2, color:'#888'});
+game.objects.push({type:'log', x:-3, y:0, z:200, width:2, length:6, color:'#552200'});
+game.objects.push({type:'finish', x:0, y:0, z:trackLength*5, depth:2});
+
+// ------------------------- TREES -------------------------
+for(let i=50;i<trackLength*5;i+=50){
+    const isBush = Math.random()<0.3;
+    game.trees.push({
+        x:(Math.random()-0.5)*30,
+        y:0,
+        z:i,
+        radius: isBush?3:2,
+        height: isBush?2:10,
+        isBush: isBush
+    });
+}
+
+// ------------------------- CONTROLS -------------------------
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+// ------------------------- RENDERING FUNCTIONS -------------------------
+function drawCylinder(x, y, z, radius, height, color){
+    const p = project3D(x,y,z);
+    const ph = project3D(x,y+height,z);
+    if(!p || !ph) return;
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, radius*ph.depth/500, radius*ph.depth/500, 0, 0, Math.PI*2);
+    ctx.fill();
+}
+function drawBox(x, y, z, w, h, d, color){
+    const p = project3D(x, y, z);
+    if(!p) return;
+    ctx.fillStyle=color;
+    const scale = 500/(z - game.player.z + 500);
+    ctx.fillRect(p.x-w*scale/2, p.y-h*scale, w*scale, h*scale);
+}
+
+// ------------------------- GAME LOOP -------------------------
+function gameLoop(){
+    game.time += 0.016;
+    if(!game.crashed && !game.finished){
+        // --- Controls ---
+        const turnSpeed = 0.02;
+        const jumpPower = 12;
+        if(keys['a'] || keys['A'] || keys['ArrowLeft']){ game.player.rotVel += turnSpeed; game.player.vx += 0.08; }
+        if(keys['d'] || keys['D'] || keys['ArrowRight']){ game.player.rotVel -= turnSpeed; game.player.vx -= 0.08; }
+        if(keys[' '] && game.player.onGround){ game.player.vy = jumpPower; game.player.onGround=false; }
+        
+        // --- Physics ---
+        game.player.vz = Math.max(3, Math.min(game.player.vz,30));
+        game.player.rotY += game.player.rotVel;
+        game.player.rotVel *= 0.90;
+        game.player.vx *= 0.95;
+        game.player.rotVel = Math.max(-0.05, Math.min(game.player.rotVel,0.05));
+        const moveX = Math.sin(game.player.rotY)*game.player.vz*0.016 + game.player.vx*0.016;
+        const moveZ = Math.cos(game.player.rotY)*game.player.vz*0.016;
+        game.player.x += moveX;
+        game.player.z += moveZ;
+        game.player.vy -= 0.6; // gravity
+        game.player.y += game.player.vy*0.016;
+        
+        // Terrain collision
+        const terrainInfo = game.terrain[Math.floor(game.player.z/5)] || {height:0};
+        if(game.player.y <= terrainInfo.height + 2){
+            game.player.y = terrainInfo.height + 2;
+            if(game.player.vy < -12) game.crashed = true;
+            game.player.vy=0;
+            game.player.onGround = true;
+        }else game.player.onGround=false;
+        
+        // Objects collision
+        game.objects.forEach(obj=>{
+            const dx = obj.x - game.player.x;
+            const dz = obj.z - game.player.z;
+            const dist = Math.sqrt(dx*dx + dz*dz);
+            if(obj.type==='rock' && dist<obj.radius+1.5 && game.player.onGround) game.crashed=true;
+            if(obj.type==='log' && dist<2 && game.player.onGround) game.crashed=true;
+            if(obj.type==='finish' && game.player.z>=obj.z) game.finished=true;
+        });
+        game.player.distance = game.player.z;
+        game.speed = game.player.vz;
+    }
+    
+    // --- Rendering ---
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    
+    // Sky
+    ctx.fillStyle='#4aa1f0';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    
+    // Mountains
+    ctx.fillStyle='#2d5016';
+    ctx.globalAlpha=0.6;
+    ctx.beginPath();
+    for(let i=0;i<canvas.width;i+=30){
+        const h = 150 + Math.sin(i*0.008 + game.player.z*0.01)*80;
+        i===0?ctx.moveTo(i,h):ctx.lineTo(i,h);
+    }
+    ctx.lineTo(canvas.width,canvas.height);
+    ctx.lineTo(0,canvas.height);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha=1;
+    
+    // Terrain segments
+    for(let i=0;i<game.terrain.length-1;i++){
+        const seg = game.terrain[i];
+        const next = game.terrain[i+1];
+        const p1=project3D(seg.leftEdge,seg.height,seg.z);
+        const p2=project3D(seg.rightEdge,seg.height,seg.z);
+        const p3=project3D(next.rightEdge,next.height,next.z);
+        const p4=project3D(next.leftEdge,next.height,next.z);
+        if(p1 && p2 && p3 && p4){
+            ctx.fillStyle='#7d5a3c';
+            ctx.beginPath();
+            ctx.moveTo(p1.x,p1.y);
+            ctx.lineTo(p2.x,p2.y);
+            ctx.lineTo(p3.x,p3.y);
+            ctx.lineTo(p4.x,p4.y);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+    
+    // Objects
+    game.objects.forEach(obj=>{
+        if(obj.type==='rock') drawCylinder(obj.x,obj.y,obj.z,obj.radius,2,obj.color);
+        else if(obj.type==='log') drawBox(obj.x,obj.y,obj.z,obj.width,obj.width,obj.length,obj.color);
+    });
+    
+    // UI
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(10,10,200,80);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 18px Arial';
+    ctx.fillText(`Distance: ${Math.floor(game.player.distance)}m`, 20, 35);
+    ctx.fillText(`Speed: ${Math.floor(game.speed*8)} km/h`, 20, 60);
+    ctx.fillText(`Air: ${game.player.onGround?'NO':'YES'}`, 20, 85);
+    
+    if(game.crashed){
+        ctx.fillStyle='rgba(0,0,0,0.7)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='#ff0000';
+        ctx.font='bold 60px Arial';
+        ctx.fillText('CRASHED!',canvas.width/2-150,canvas.height/2-50);
+    }
+    if(game.finished){
+        ctx.fillStyle='rgba(0,0,0,0.7)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='#4CAF50';
+        ctx.font='bold 60px Arial';
+        ctx.fillText('FINISHED!',canvas.width/2-150,canvas.height/2-40);
+    }
+    
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+// Resize
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+</script>
+</body>
+</html>
