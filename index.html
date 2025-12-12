@@ -484,19 +484,29 @@
                   game.player.onGround = false;
                 }
 
-                game.player.vz = Math.max(3, Math.min(game.player.vz, 30));
+                                game.player.vz = Math.max(3, Math.min(game.player.vz, 30));
                 game.player.rotY += game.player.rotVel;
                 game.player.rotVel *= 0.90;
                 game.player.vx *= 0.95;
                 game.player.rotVel = Math.max(-0.05, Math.min(game.player.rotVel, 0.05));
 
-                const moveX = Math.sin(game.player.rotY) * game.player.vz * 0.016 + game.player.vx * 0.016;
-                const moveZ = Math.cos(game.player.rotY) * game.player.vz * 0.016;
+                const dt = 0.016;
+                const steerFactor = 0.25; // tuned responsiveness
+                const moveX = Math.sin(game.player.rotY) * game.player.vz * steerFactor * dt + game.player.vx * dt;
+                const moveZ = Math.cos(game.player.rotY) * game.player.vz * dt;
+
+                // Make the camera (player.rotY) point toward actual movement direction
+                const desiredHeading = Math.atan2(moveX, moveZ);
+                const headingLerp = 0.12; // smoothing
+                let delta = desiredHeading - game.player.rotY;
+                while (delta > Math.PI) delta -= Math.PI * 2;
+                while (delta < -Math.PI) delta += Math.PI * 2;
+                game.player.rotY += delta * headingLerp;
 
                 game.player.x += moveX;
                 game.player.z += moveZ;
                 game.player.vy -= 0.6;
-                game.player.y += game.player.vy * 0.016;
+                game.player.y += game.player.vy * dt;
 
                 const terrainInfo = getTerrainAt(game.player.x, game.player.z);
                 
