@@ -1,811 +1,894 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mountain Bike 3D</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mountain Bike 3D</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-        // Lucide icon components (simple SVG versions)
-        const Mountain = ({ className, style }) => (
-          <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m8 3 4 8 5-5 5 15H2L8 3z"/>
-          </svg>
-        );
+        // Lucide icon components (simple SVG versions)
+        const Mountain = ({ className, style }) => (
+          <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m8 3 4 8 5-5 5 15H2L8 3z"/>
+          </svg>
+        );
 
-        const Circle = ({ className }) => (
-          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10"/>
-          </svg>
-        );
+        const Circle = ({ className }) => (
+          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+        );
 
-        const Square = ({ className }) => (
-          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <rect x="3" y="3" width="18" height="18"/>
-          </svg>
-        );
+        const Square = ({ className }) => (
+          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <rect x="3" y="3" width="18" height="18"/>
+          </svg>
+        );
 
-        const Diamond = ({ className }) => (
-          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L2 12l10 10 10-10L12 2z"/>
-          </svg>
-        );
+        const Diamond = ({ className }) => (
+          <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 12l10 10 10-10L12 2z"/>
+          </svg>
+        );
 
-        const MountainBikeGame = () => {
-          const [screen, setScreen] = useState('menu');
-          const [selectedBike, setSelectedBike] = useState(null);
-          const [selectedMap, setSelectedMap] = useState(null);
-          const [selectedTrail, setSelectedTrail] = useState(null);
-          const canvasRef = useRef(null);
-          const animationRef = useRef(null);
-          const keysRef = useRef({});
+        const MountainBikeGame = () => {
+          const [screen, setScreen] = useState('menu');
+          const [selectedBike, setSelectedBike] = useState(null);
+          const [selectedMap, setSelectedMap] = useState(null);
+          const [selectedTrail, setSelectedTrail] = useState(null);
+          const canvasRef = useRef(null);
+          const animationRef = useRef(null);
+          const keysRef = useRef({});
 
-          const bikes = [
-            { id: 1, name: 'Cross Country', speed: 1.3, handling: 1.0, jump: 1.0, color: '#FF6B6B' },
-            { id: 2, name: 'Trail Bike', speed: 1.1, handling: 1.2, jump: 1.2, color: '#4ECDC4' },
-            { id: 3, name: 'Enduro', speed: 1.0, handling: 1.4, jump: 1.4, color: '#45B7D1' },
-            { id: 4, name: 'Downhill', speed: 0.9, handling: 1.6, jump: 1.6, color: '#F7DC6F' }
-          ];
+          const bikes = [
+            { id: 1, name: 'Cross Country', speed: 1.3, handling: 1.0, jump: 1.0, color: '#FF6B6B' },
+            { id: 2, name: 'Trail Bike', speed: 1.1, handling: 1.2, jump: 1.2, color: '#4ECDC4' },
+            { id: 3, name: 'Enduro', speed: 1.0, handling: 1.4, jump: 1.4, color: '#45B7D1' },
+            { id: 4, name: 'Downhill', speed: 0.9, handling: 1.6, jump: 1.6, color: '#F7DC6F' }
+          ];
 
-          const maps = [
-            {
-              id: 1,
-              name: 'Pine Valley',
-              skyColor: '#87CEEB',
-              groundColor: '#3d5a3d',
-              dirtColor: '#6B4423',
-              fogColor: '#B0C4DE',
-              trails: [
-                { id: 1, name: 'Easy Street', difficulty: 'green', length: 1500, features: 'gentle' },
-                { id: 2, name: 'Gentle Slope', difficulty: 'green', length: 1600, features: 'gentle' },
-                { id: 3, name: 'Twisted Path', difficulty: 'blue', length: 2000, features: 'mixed' },
-                { id: 4, name: 'Rocky Ridge', difficulty: 'blue', length: 2200, features: 'mixed' },
-                { id: 5, name: 'Death Drop', difficulty: 'black', length: 2800, features: 'extreme' },
-                { id: 6, name: 'The Gauntlet', difficulty: 'black', length: 3000, features: 'extreme' }
-              ]
-            },
-            {
-              id: 2,
-              name: 'Desert Peak',
-              skyColor: '#FFD700',
-              groundColor: '#8B7355',
-              dirtColor: '#CD853F',
-              fogColor: '#F4A460',
-              trails: [
-                { id: 1, name: 'Sand Cruise', difficulty: 'green', length: 1500, features: 'gentle' },
-                { id: 2, name: 'Dune Runner', difficulty: 'green', length: 1700, features: 'gentle' },
-                { id: 3, name: 'Canyon Carver', difficulty: 'blue', length: 2100, features: 'mixed' },
-                { id: 4, name: 'Mesa Madness', difficulty: 'blue', length: 2300, features: 'mixed' },
-                { id: 5, name: 'Cactus Chaos', difficulty: 'black', length: 2900, features: 'extreme' },
-                { id: 6, name: 'Scorpion Sting', difficulty: 'black', length: 3100, features: 'extreme' }
-              ]
-            },
-            {
-              id: 3,
-              name: 'Alpine Heights',
-              skyColor: '#B0E0E6',
-              groundColor: '#556B2F',
-              dirtColor: '#696969',
-              fogColor: '#D3D3D3',
-              trails: [
-                { id: 1, name: 'Beginner Bowl', difficulty: 'green', length: 1500, features: 'gentle' },
-                { id: 2, name: 'Meadow Run', difficulty: 'green', length: 1800, features: 'gentle' },
-                { id: 3, name: 'Avalanche Alley', difficulty: 'blue', length: 2200, features: 'mixed' },
-                { id: 4, name: 'Ice Breaker', difficulty: 'blue', length: 2400, features: 'mixed' },
-                { id: 5, name: 'Summit Screamer', difficulty: 'black', length: 3000, features: 'extreme' },
-                { id: 6, name: 'Widow Maker', difficulty: 'black', length: 3200, features: 'extreme' }
-              ]
-            }
-          ];
+          const maps = [
+            {
+              id: 1,
+              name: 'Pine Valley',
+              skyColor: '#87CEEB',
+              groundColor: '#3d5a3d',
+              dirtColor: '#6B4423',
+              fogColor: '#B0C4DE',
+              trails: [
+                { id: 1, name: 'Easy Street', difficulty: 'green', length: 1500, features: 'gentle' },
+                { id: 2, name: 'Gentle Slope', difficulty: 'green', length: 1600, features: 'gentle' },
+                { id: 3, name: 'Twisted Path', difficulty: 'blue', length: 2000, features: 'mixed' },
+                { id: 4, name: 'Rocky Ridge', difficulty: 'blue', length: 2200, features: 'mixed' },
+                { id: 5, name: 'Death Drop', difficulty: 'black', length: 2800, features: 'extreme' },
+                { id: 6, name: 'The Gauntlet', difficulty: 'black', length: 3000, features: 'extreme' }
+              ]
+            },
+            {
+              id: 2,
+              name: 'Desert Peak',
+              skyColor: '#FFD700',
+              groundColor: '#8B7355',
+              dirtColor: '#CD853F',
+              fogColor: '#F4A460',
+              trails: [
+                { id: 1, name: 'Sand Cruise', difficulty: 'green', length: 1500, features: 'gentle' },
+                { id: 2, name: 'Dune Runner', difficulty: 'green', length: 1700, features: 'gentle' },
+                { id: 3, name: 'Canyon Carver', difficulty: 'blue', length: 2100, features: 'mixed' },
+                { id: 4, name: 'Mesa Madness', difficulty: 'blue', length: 2300, features: 'mixed' },
+                { id: 5, name: 'Cactus Chaos', difficulty: 'black', length: 2900, features: 'extreme' },
+                { id: 6, name: 'Scorpion Sting', difficulty: 'black', length: 3100, features: 'extreme' }
+              ]
+            },
+            {
+              id: 3,
+              name: 'Alpine Heights',
+              skyColor: '#B0E0E6',
+              groundColor: '#556B2F',
+              dirtColor: '#696969',
+              fogColor: '#D3D3D3',
+              trails: [
+                { id: 1, name: 'Beginner Bowl', difficulty: 'green', length: 1500, features: 'gentle' },
+                { id: 2, name: 'Meadow Run', difficulty: 'green', length: 1800, features: 'gentle' },
+                { id: 3, name: 'Avalanche Alley', difficulty: 'blue', length: 2200, features: 'mixed' },
+                { id: 4, name: 'Ice Breaker', difficulty: 'blue', length: 2400, features: 'mixed' },
+                { id: 5, name: 'Summit Screamer', difficulty: 'black', length: 3000, features: 'extreme' },
+                { id: 6, name: 'Widow Maker', difficulty: 'black', length: 3200, features: 'extreme' }
+              ]
+            }
+          ];
 
-          const getDifficultyColor = (diff) => {
-            if (diff === 'green') return '#4CAF50';
-            if (diff === 'blue') return '#2196F3';
-            return '#212121';
-          };
+          const getDifficultyColor = (diff) => {
+            if (diff === 'green') return '#4CAF50';
+            if (diff === 'blue') return '#2196F3';
+            return '#212121';
+          };
 
-          const getDifficultyIcon = (diff) => {
-            if (diff === 'green') return <Circle className="w-4 h-4" />;
-            if (diff === 'blue') return <Square className="w-4 h-4" />;
-            return <Diamond className="w-4 h-4" />;
-          };
+          const getDifficultyIcon = (diff) => {
+            if (diff === 'green') return <Circle className="w-4 h-4" />;
+            if (diff === 'blue') return <Square className="w-4 h-4" />;
+            return <Diamond className="w-4 h-4" />;
+          };
 
-          useEffect(() => {
-            if (screen === 'playing' && canvasRef.current) {
-              const canvas = canvasRef.current;
-              const ctx = canvas.getContext('2d');
-              canvas.width = 1000;
-              canvas.height = 700;
+          useEffect(() => {
+            if (screen === 'playing' && canvasRef.current) {
+              const canvas = canvasRef.current;
+              const ctx = canvas.getContext('2d');
+              canvas.width = 1000;
+              canvas.height = 700;
 
-              const bike = bikes.find(b => b.id === selectedBike);
-              const game = {
-                player: {
-                  x: 0,
-                  y: 10,
-                  z: 20,
-                  vx: 0,
-                  vy: 0,
-                  vz: 8,
-                  rotY: 0,
-                  rotVel: 0,
-                  pitch: 0,
-                  onGround: false,
-                  distance: 0
-                },
-                terrain: [],
-                objects: [],
-                trees: [],
-                mountainSides: [],
-                time: 0,
-                crashed: false,
-                finished: false,
-                speed: 0,
-                startTime: 0
-              };
+              const bike = bikes.find(b => b.id === selectedBike);
+              const game = {
+                player: {
+                  x: 0,
+                  y: 10,
+                  z: 20,
+                  vx: 0,
+                  vy: 0,
+                  vz: 8,
+                  rotY: 0,
+                  rotVel: 0,
+                  pitch: 0,
+                  onGround: false,
+                  distance: 0
+                },
+                terrain: [],
+                objects: [],
+                trees: [],
+                mountainSides: [],
+                time: 0,
+                crashed: false,
+                finished: false,
+                speed: 0,
+                startTime: 0
+              };
 
-              // Generate terrain path
-              const segmentLength = 5;
-              const numSegments = Math.ceil(selectedTrail.length / segmentLength);
-              let currentHeight = 50;
-              let pathCurve = 0;
-              
-              for (let i = 0; i < numSegments; i++) {
-                const z = i * segmentLength;
+              // Generate terrain path
+              const segmentLength = 5;
+              const numSegments = Math.ceil(selectedTrail.length / segmentLength);
+              let currentHeight = 50;
+              let pathCurve = 0;
+              
+              for (let i = 0; i < numSegments; i++) {
+                const z = i * segmentLength;
+                
+                if (Math.random() < 0.1) {
+                  pathCurve += (Math.random() - 0.5) * 2;
+                }
+                pathCurve *= 0.95;
+                
+                const segment = {
+                  z: z,
+                  centerX: pathCurve,
+                  width: 12,
+                  height: currentHeight,
+                  leftEdge: pathCurve - 6,
+                  rightEdge: pathCurve + 6
+                };
+
+                if (i > 0) {
+                  if (selectedTrail.features === 'extreme') {
+                    currentHeight -= 0.3 + Math.random() * 0.4;
+                  } else if (selectedTrail.features === 'mixed') {
+                    currentHeight -= 0.2 + Math.random() * 0.3;
+                  } else {
+                    currentHeight -= 0.15 + Math.random() * 0.2;
+                  }
+                }
+
+                game.terrain.push(segment);
+
+                for (let side = -1; side <= 1; side += 2) {
+                  for (let offset = 1; offset <= 8; offset++) {
+                    const sideX = pathCurve + side * (6 + offset * 3);
+                    const sideHeight = currentHeight + (offset * 0.5) + (Math.random() - 0.5) * 2;
+                    game.mountainSides.push({
+                      x: sideX,
+                      y: sideHeight,
+                      z: z,
+                      size: 3
+                    });
+                  }
+                }
+
+                if (i % 2 === 0 && i > 5) {
+                  const side = Math.random() < 0.5 ? -1 : 1;
+                  const treeOffset = 8 + Math.random() * 15;
+                  const treeX = pathCurve + side * treeOffset;
+                  const treeGroundHeight = currentHeight + (treeOffset - 8) * 0.5 + (Math.random() - 0.5) * 3;
+                  
+                  game.trees.push({
+                    x: treeX,
+                    y: treeGroundHeight,
+                    z: z,
+                    height: 15 + Math.random() * 10,
+                    radius: 1.5 + Math.random() * 0.8
+                  });
+                  
+                  if (Math.random() < 0.6) {
+                    const bushOffset = treeOffset + (Math.random() - 0.5) * 4;
+                    const bushX = pathCurve + side * bushOffset;
+                    const bushGroundHeight = currentHeight + (bushOffset - 8) * 0.5 + (Math.random() - 0.5) * 2;
+                    
+                    game.trees.push({
+                      x: bushX,
+                      y: bushGroundHeight,
+                      z: z + (Math.random() - 0.5) * 8,
+                      height: 2 + Math.random() * 2,
+                      radius: 1 + Math.random() * 0.5,
+                      isBush: true
+                    });
+                  }
+                }
+
+                if (i > 10 && Math.random() < 0.15) {
+                  const objType = Math.random();
+                  let obj;
+
+                  if (objType < 0.25 && selectedTrail.features !== 'gentle') {
+                    obj = {
+                      type: 'jump',
+                      x: pathCurve + (Math.random() - 0.5) * 3,
+                      y: currentHeight,
+                      z: z,
+                      width: 6,
+                      height: 1.5,
+                      depth: 6,
+                      color: '#8B4513'
+                    };
+                  } else if (objType < 0.4 && selectedTrail.features === 'extreme') {
+                    const dropHeight = 3 + Math.random() * 4;
+                    obj = {
+                      type: 'drop',
+                      x: pathCurve,
+                      y: currentHeight - dropHeight,
+                      z: z,
+                      width: 8,
+                      height: dropHeight,
+                      depth: 8,
+                      color: '#654321'
+                    };
+                    currentHeight -= dropHeight;
+                    for (let j = 0; j < 3; j++) {
+                      if (game.terrain[i + j]) {
+                        game.terrain[i + j].height = currentHeight;
+                      }
+                    }
+                  } else if (objType < 0.7) {
+                    obj = {
+                      type: 'rock',
+                      x: pathCurve + (Math.random() - 0.5) * 5,
+                      y: currentHeight,
+                      z: z,
+                      radius: 1 + Math.random() * 0.8,
+                      color: '#666'
+                    };
+                  } else {
+                    obj = {
+                      type: 'log',
+                      x: pathCurve + (Math.random() - 0.5) * 5,
+                      y: currentHeight,
+                      z: z,
+                      width: 0.6,
+                      length: 3,
+                      color: '#5D4037'
+                    };
+                  }
+                  
+                  game.objects.push(obj);
+                }
+              }
+
+              game.objects.push({
+                type: 'finish',
+                x: pathCurve,
+                y: currentHeight,
+                z: selectedTrail.length - 20,
+                width: 8,
+                height: 8,
+                depth: 1
+              });
+
+              const handleKeyDown = (e) => { 
+                keysRef.current[e.key] = true;
+                if (e.key === 'r' || e.key === 'R') {
+                  if (game.crashed || game.finished) {
+                    setScreen('trail-select');
+                  }
+                }
+              };
+              const handleKeyUp = (e) => { keysRef.current[e.key] = false; };
+              
+              window.addEventListener('keydown', handleKeyDown);
+              window.addEventListener('keyup', handleKeyUp);
+
+              const getTerrainAt = (x, z) => {
+                let closestSeg = null;
+                let minDist = Infinity;
+                
+                for (let seg of game.terrain) {
+                  const dist = Math.abs(seg.z - z);
+                  if (dist < minDist) {
+                    minDist = dist;
+                    closestSeg = seg;
+                  }
+                }
+                
+                if (!closestSeg) return { height: 0, onTrack: false };
+                
+                const onTrack = x >= closestSeg.leftEdge && x <= closestSeg.rightEdge;
+                return { height: closestSeg.height, onTrack, centerX: closestSeg.centerX };
+              };
+
+              const project3D = (x, y, z) => {
+                const fov = 400;
+                const dx = x - game.player.x;
+                const dy = y - game.player.y;
+                const dz = z - game.player.z;
+                
+                const rotatedX = dx * Math.cos(-game.player.rotY) - dz * Math.sin(-game.player.rotY);
+                const rotatedZ = dx * Math.sin(-game.player.rotY) + dz * Math.cos(-game.player.rotY);
+                
+                if (rotatedZ <= 0.1) return null;
+                
+                const scale = fov / rotatedZ;
+                return {
+                  x: canvas.width / 2 + rotatedX * scale,
+                  y: canvas.height / 2 - (dy - 2) * scale,
+                  scale: scale,
+                  depth: rotatedZ
+                };
+              };
+
+              const drawCylinder = (x, y, z, radius, height, color) => {
+                const topProj = project3D(x, y + height, z);
+                const bottomProj = project3D(x, y, z);
+                
+                if (!topProj || !bottomProj) return;
+                
+                const topRadius = radius * topProj.scale;
+                const bottomRadius = radius * bottomProj.scale;
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.ellipse(bottomProj.x, bottomProj.y, bottomRadius, bottomRadius * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = shadeColor(color, -20);
+                ctx.beginPath();
+                ctx.moveTo(bottomProj.x - bottomRadius, bottomProj.y);
+                ctx.lineTo(topProj.x - topRadius, topProj.y);
+                ctx.lineTo(topProj.x + topRadius, topProj.y);
+                ctx.lineTo(bottomProj.x + bottomRadius, bottomProj.y);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = shadeColor(color, 20);
+                ctx.beginPath();
+                ctx.ellipse(topProj.x, topProj.y, topRadius, topRadius * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+              };
+
+              const drawBox = (x, y, z, w, h, d, color) => {
+                const corners = [
+                  [x - w/2, y, z - d/2], [x + w/2, y, z - d/2],
+                  [x + w/2, y, z + d/2], [x - w/2, y, z + d/2],
+                  [x - w/2, y + h, z - d/2], [x + w/2, y + h, z - d/2],
+                  [x + w/2, y + h, z + d/2], [x - w/2, y + h, z + d/2]
+                ];
+
+                const projected = corners.map(c => project3D(c[0], c[1], c[2])).filter(p => p);
+                if (projected.length < 4) return;
+
+                const faces = [
+                  [4, 5, 6, 7, shadeColor(color, 20)],
+                  [2, 3, 7, 6, shadeColor(color, 0)],
+                  [1, 2, 6, 5, shadeColor(color, -20)],
+                  [0, 1, 5, 4, shadeColor(color, -40)]
+                ];
+
+                faces.forEach(face => {
+                  if (projected[face[0]] && projected[face[1]] && projected[face[2]] && projected[face[3]]) {
+                    ctx.fillStyle = face[4];
+                    ctx.beginPath();
+                    ctx.moveTo(projected[face[0]].x, projected[face[0]].y);
+                    ctx.lineTo(projected[face[1]].x, projected[face[1]].y);
+                    ctx.lineTo(projected[face[2]].x, projected[face[2]].y);
+                    ctx.lineTo(projected[face[3]].x, projected[face[3]].y);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                  }
+                });
+              };
+
+              const shadeColor = (color, percent) => {
+                const num = parseInt(color.replace("#",""), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+                const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+                const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+                return "#" + ((R << 16) | (G << 8) | B).toString(16).padStart(6, '0');
+              };
+
+              const gameLoop = () => {
+                if (game.crashed || game.finished) {
+                  return;
+                }
+
+                if (game.time < 1.0) {
+                  game.time += 0.016;
+                  
+                  ctx.fillStyle = selectedMap.skyColor;
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                  
+                  ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
+                  ctx.beginPath();
+                  for (let i = 0; i < canvas.width; i += 50) {
+                    const height = 200 + Math.sin(i * 0.01) * 100;
+                    if (i === 0) ctx.moveTo(i, height);
+                    else ctx.lineTo(i, height);
+                  }
+                  ctx.lineTo(canvas.width, canvas.height);
+                  ctx.lineTo(0, canvas.height);
+                  ctx.closePath();
+                  ctx.fill();
+                  
+                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                  ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 50, 300, 100);
+                  ctx.fillStyle = '#FFF';
+                  ctx.font = 'bold 48px Arial';
+                  const countdown = Math.ceil(1.0 - game.time);
+                  ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width/2 - 30, canvas.height/2 + 15);
+                  
+                  animationRef.current = requestAnimationFrame(gameLoop);
+                  return;
+                }
+
+                game.time += 0.016;
+                const keys = keysRef.current;
+
+                const accel = 0.3 * bike.speed;
+                const turnSpeed = 0.015 * bike.handling;
+                const jumpPower = 10 * bike.jump;
+
+                if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+                  game.player.vz += accel;
+                }
+                if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+                  game.player.vz -= accel * 0.5;
+                }
                 
-                if (Math.random() < 0.1) {
-                  pathCurve += (Math.random() - 0.5) * 2;
-                }
-                pathCurve *= 0.95;
-                
-                const segment = {
-                  z: z,
-                  centerX: pathCurve,
-                  width: 12,
-                  height: currentHeight,
-                  leftEdge: pathCurve - 6,
-                  rightEdge: pathCurve + 6
-                };
+                // FIX: Swapped logic for 'a'/'A' and 'd'/'D' to correct turning directions
+                if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                  game.player.rotVel += turnSpeed; // Turn Left
+                  game.player.vx += 0.08;
+                }
+                if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                  game.player.rotVel -= turnSpeed; // Turn Right
+                  game.player.vx -= 0.08;
+                }
+                if (keys[' '] && game.player.onGround) {
+                  game.player.vy = jumpPower;
+                  game.player.onGround = false;
+                }
 
-                if (i > 0) {
-                  if (selectedTrail.features === 'extreme') {
-                    currentHeight -= 0.3 + Math.random() * 0.4;
-                  } else if (selectedTrail.features === 'mixed') {
-                    currentHeight -= 0.2 + Math.random() * 0.3;
-                  } else {
-                    currentHeight -= 0.15 + Math.random() * 0.2;
-                  }
-                }
+                                game.player.vz = Math.max(3, Math.min(game.player.vz, 30));
+                game.player.rotY += game.player.rotVel;
+                game.player.rotVel *= 0.90;
+                game.player.vx *= 0.95;
+                game.player.rotVel = Math.max(-0.05, Math.min(game.player.rotVel, 0.05));
 
-                game.terrain.push(segment);
+                const dt = 0.016;
+                const steerFactor = 0.25; // tuned responsiveness
+                const moveX = Math.sin(game.player.rotY) * game.player.vz * steerFactor * dt + game.player.vx * dt;
+                const moveZ = Math.cos(game.player.rotY) * game.player.vz * dt;
 
-                for (let side = -1; side <= 1; side += 2) {
-                  for (let offset = 1; offset <= 8; offset++) {
-                    const sideX = pathCurve + side * (6 + offset * 3);
-                    const sideHeight = currentHeight + (offset * 0.5) + (Math.random() - 0.5) * 2;
-                    game.mountainSides.push({
-                      x: sideX,
-                      y: sideHeight,
-                      z: z,
-                      size: 3
-                    });
-                  }
-                }
+                // Make the camera (player.rotY) point toward actual movement direction
+                const desiredHeading = Math.atan2(moveX, moveZ);
+                const headingLerp = 0.12; // smoothing
+                let delta = desiredHeading - game.player.rotY;
+                while (delta > Math.PI) delta -= Math.PI * 2;
+                while (delta < -Math.PI) delta += Math.PI * 2;
+                game.player.rotY += delta * headingLerp;
 
-                if (i % 2 === 0 && i > 5) {
-                  const side = Math.random() < 0.5 ? -1 : 1;
-                  const treeOffset = 8 + Math.random() * 15;
-                  const treeX = pathCurve + side * treeOffset;
-                  const treeGroundHeight = currentHeight + (treeOffset - 8) * 0.5 + (Math.random() - 0.5) * 3;
-                  
-                  game.trees.push({
-                    x: treeX,
-                    y: treeGroundHeight,
-                    z: z,
-                    height: 15 + Math.random() * 10,
-                    radius: 1.5 + Math.random() * 0.8
-                  });
-                  
-                  if (Math.random() < 0.6) {
-                    const bushOffset = treeOffset + (Math.random() - 0.5) * 4;
-                    const bushX = pathCurve + side * bushOffset;
-                    const bushGroundHeight = currentHeight + (bushOffset - 8) * 0.5 + (Math.random() - 0.5) * 2;
-                    
-                    game.trees.push({
-                      x: bushX,
-                      y: bushGroundHeight,
-                      z: z + (Math.random() - 0.5) * 8,
-                      height: 2 + Math.random() * 2,
-                      radius: 1 + Math.random() * 0.5,
-                      isBush: true
-                    });
-                  }
-                }
+                game.player.x += moveX;
+                game.player.z += moveZ;
+                game.player.vy -= 0.6;
+                game.player.y += game.player.vy * dt;
 
-                if (i > 10 && Math.random() < 0.15) {
-                  const objType = Math.random();
-                  let obj;
+                const terrainInfo = getTerrainAt(game.player.x, game.player.z);
+                
+                if (game.player.y <= terrainInfo.height + 2) {
+                  game.player.y = terrainInfo.height + 2;
+                  
+                  if (game.player.vy < -12) {
+                    game.crashed = true;
+                  }
+                  
+                  game.player.vy = 0;
+                  game.player.onGround = true;
+                } else {
+                  game.player.onGround = false;
+                }
 
-                  if (objType < 0.25 && selectedTrail.features !== 'gentle') {
-                    obj = {
-                      type: 'jump',
-                      x: pathCurve + (Math.random() - 0.5) * 3,
-                      y: currentHeight,
-                      z: z,
-                      width: 6,
-                      height: 1.5,
-                      depth: 6,
-                      color: '#8B4513'
-                    };
-                  } else if (objType < 0.4 && selectedTrail.features === 'extreme') {
-                    const dropHeight = 3 + Math.random() * 4;
-                    obj = {
-                      type: 'drop',
-                      x: pathCurve,
-                      y: currentHeight - dropHeight,
-                      z: z,
-                      width: 8,
-                      height: dropHeight,
-                      depth: 8,
-                      color: '#654321'
-                    };
-                    currentHeight -= dropHeight;
-                    for (let j = 0; j < 3; j++) {
-                      if (game.terrain[i + j]) {
-                        game.terrain[i + j].height = currentHeight;
-                      }
-                    }
-                  } else if (objType < 0.7) {
-                    obj = {
-                      type: 'rock',
-                      x: pathCurve + (Math.random() - 0.5) * 5,
-                      y: currentHeight,
-                      z: z,
-                      radius: 1 + Math.random() * 0.8,
-                      color: '#666'
-                    };
-                  } else {
-                    obj = {
-                      type: 'log',
-                      x: pathCurve + (Math.random() - 0.5) * 5,
-                      y: currentHeight,
-                      z: z,
-                      width: 0.6,
-                      length: 3,
-                      color: '#5D4037'
-                    };
-                  }
-                  
-                  game.objects.push(obj);
-                }
-              }
+                if (!terrainInfo.onTrack && game.player.onGround) {
+                  game.crashed = true;
+                }
 
-              game.objects.push({
-                type: 'finish',
-                x: pathCurve,
-                y: currentHeight,
-                z: selectedTrail.length - 20,
-                width: 8,
-                height: 8,
-                depth: 1
-              });
+                game.objects.forEach(obj => {
+                  const dx = obj.x - game.player.x;
+                  const dz = obj.z - game.player.z;
+                  const dist = Math.sqrt(dx * dx + dz * dz);
+                  
+                  if (obj.type === 'rock' && dist < obj.radius + 1.5) {
+                    if (game.player.onGround) {
+                      game.crashed = true;
+                    }
+                  } else if (obj.type === 'log' && dist < 2) {
+                    if (game.player.onGround) {
+                      game.crashed = true;
+                    }
+                  } else if (obj.type === 'finish' && game.player.z >= obj.z) {
+                    game.finished = true;
+                  }
+                });
 
-              const handleKeyDown = (e) => { 
-                keysRef.current[e.key] = true;
-                if (e.key === 'r' || e.key === 'R') {
-                  if (game.crashed || game.finished) {
-                    setScreen('trail-select');
-                  }
-                }
-              };
-              const handleKeyUp = (e) => { keysRef.current[e.key] = false; };
-              
-              window.addEventListener('keydown', handleKeyDown);
-              window.addEventListener('keyup', handleKeyUp);
+                game.player.distance = game.player.z;
+                game.speed = game.player.vz;
 
-              const getTerrainAt = (x, z) => {
-                let closestSeg = null;
-                let minDist = Infinity;
-                
-                for (let seg of game.terrain) {
-                  const dist = Math.abs(seg.z - z);
-                  if (dist < minDist) {
-                    minDist = dist;
-                    closestSeg = seg;
-                  }
-                }
-                
-                if (!closestSeg) return { height: 0, onTrack: false };
-                
-                const onTrack = x >= closestSeg.leftEdge && x <= closestSeg.rightEdge;
-                return { height: closestSeg.height, onTrack, centerX: closestSeg.centerX };
-              };
+                ctx.fillStyle = selectedMap.skyColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              const project3D = (x, y, z) => {
-                const fov = 400;
-                const dx = x - game.player.x;
-                const dy = y - game.player.y;
-                const dz = z - game.player.z;
-                
-                const rotatedX = dx * Math.cos(-game.player.rotY) - dz * Math.sin(-game.player.rotY);
-                const rotatedZ = dx * Math.sin(-game.player.rotY) + dz * Math.cos(-game.player.rotY);
-                
-                if (rotatedZ <= 0.1) return null;
-                
-                const scale = fov / rotatedZ;
-                return {
-                  x: canvas.width / 2 + rotatedX * scale,
-                  y: canvas.height / 2 - (dy - 2) * scale,
-                  scale: scale,
-                  depth: rotatedZ
-                };
-              };
+                ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                for (let i = 0; i < canvas.width; i += 30) {
+                  const height = 150 + Math.sin(i * 0.008 + game.player.z * 0.01) * 80;
+                  if (i === 0) ctx.moveTo(i, height);
+                  else ctx.lineTo(i, height);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.lineTo(0, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
 
-              const drawCylinder = (x, y, z, radius, height, color) => {
-                const topProj = project3D(x, y + height, z);
-                const bottomProj = project3D(x, y, z);
-                
-                if (!topProj || !bottomProj) return;
-                
-                const topRadius = radius * topProj.scale;
-                const bottomRadius = radius * bottomProj.scale;
-                
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.ellipse(bottomProj.x, bottomProj.y, bottomRadius, bottomRadius * 0.5, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = shadeColor(color, -20);
-                ctx.beginPath();
-                ctx.moveTo(bottomProj.x - bottomRadius, bottomProj.y);
-                ctx.lineTo(topProj.x - topRadius, topProj.y);
-                ctx.lineTo(topProj.x + topRadius, topProj.y);
-                ctx.lineTo(bottomProj.x + bottomRadius, bottomProj.y);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.fillStyle = shadeColor(color, 20);
-                ctx.beginPath();
-                ctx.ellipse(topProj.x, topProj.y, topRadius, topRadius * 0.5, 0, 0, Math.PI * 2);
-                ctx.fill();
-              };
+                ctx.fillStyle = shadeColor(selectedMap.groundColor, -20);
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                for (let i = 0; i < canvas.width; i += 40) {
+                  const height = 250 + Math.sin(i * 0.012 + game.player.z * 0.015) * 60;
+                  if (i === 0) ctx.moveTo(i, height);
+                  else ctx.lineTo(i, height);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.lineTo(0, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
 
-              const drawBox = (x, y, z, w, h, d, color) => {
-                const corners = [
-                  [x - w/2, y, z - d/2], [x + w/2, y, z - d/2],
-                  [x + w/2, y, z + d/2], [x - w/2, y, z + d/2],
-                  [x - w/2, y + h, z - d/2], [x + w/2, y + h, z - d/2],
-                  [x + w/2, y + h, z + d/2], [x - w/2, y + h, z + d/2]
-                ];
+                const renderQueue = [];
 
-                const projected = corners.map(c => project3D(c[0], c[1], c[2])).filter(p => p);
-                if (projected.length < 4) return;
+                game.mountainSides.forEach(side => {
+                  if (side.z > game.player.z - 20 && side.z < game.player.z + 150) {
+                    const p = project3D(side.x, side.y, side.z);
+                    if (p) {
+                      renderQueue.push({ depth: p.depth, fn: () => {
+                        const terrainColor = selectedMap.groundColor;
+                        ctx.fillStyle = shadeColor(terrainColor, -10 - (Math.abs(side.x) * 2));
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, side.size * p.scale, 0, Math.PI * 2);
+                        ctx.fill();
+                      }});
+                    }
+                  }
+                });
 
-                const faces = [
-                  [4, 5, 6, 7, shadeColor(color, 20)],
-                  [2, 3, 7, 6, shadeColor(color, 0)],
-                  [1, 2, 6, 5, shadeColor(color, -20)],
-                  [0, 1, 5, 4, shadeColor(color, -40)]
-                ];
+                game.trees.forEach(tree => {
+                  if (tree.z > game.player.z - 20 && tree.z < game.player.z + 150) {
+                    const p = project3D(tree.x, tree.y, tree.z);
+                    if (p) {
+                      renderQueue.push({ depth: p.depth, fn: () => {
+                        if (tree.isBush) {
+                          drawCylinder(tree.x, tree.y, tree.z, tree.radius, tree.height, '#2d5016');
+                        } else {
+                          const trunkColor = '#3d2817';
+                          drawCylinder(tree.x, tree.y, tree.z, tree.radius * 0.6, tree.height * 0.3, trunkColor);
+                          
+                          const foliageColor = '#2d5016';
+                          const layers = 3;
+                          for (let i = 0; i < layers; i++) {
+                            const layerHeight = tree.height * 0.3 + (i * tree.height * 0.23);
+                            const layerRadius = tree.radius * (1.8 - i * 0.3);
+                            drawCylinder(tree.x, tree.y + layerHeight, tree.z, layerRadius, tree.height * 0.23, 
+                                        shadeColor(foliageColor, i * 10));
+                          }
+                        }
+                      }});
+                    }
+                  }
+                });
 
-                faces.forEach(face => {
-                  if (projected[face[0]] && projected[face[1]] && projected[face[2]] && projected[face[3]]) {
-                    ctx.fillStyle = face[4];
-                    ctx.beginPath();
-                    ctx.moveTo(projected[face[0]].x, projected[face[0]].y);
-                    ctx.lineTo(projected[face[1]].x, projected[face[1]].y);
-                    ctx.lineTo(projected[face[2]].x, projected[face[2]].y);
-                    ctx.lineTo(projected[face[3]].x, projected[face[3]].y);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                  }
-                });
-              };
+                for (let i = 0; i < game.terrain.length - 1; i++) {
+                  const seg = game.terrain[i];
+                  const nextSeg = game.terrain[i + 1];
 
-              const shadeColor = (color, percent) => {
-                const num = parseInt(color.replace("#",""), 16);
-                const amt = Math.round(2.55 * percent);
-                const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-                const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
-                const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
-                return "#" + ((R << 16) | (G << 8) | B).toString(16).padStart(6, '0');
-              };
+                  if (seg.z > game.player.z - 10 && seg.z < game.player.z + 150) {
+                    const p = project3D(seg.centerX, seg.height, seg.z);
+                    if (p) {
+                      renderQueue.push({ depth: p.depth, fn: () => {
+                        const p1 = project3D(seg.leftEdge, seg.height, seg.z);
+                        const p2 = project3D(seg.rightEdge, seg.height, seg.z);
+                        const p3 = project3D(nextSeg.rightEdge, nextSeg.height, nextSeg.z);
+                        const p4 = project3D(nextSeg.leftEdge, nextSeg.height, nextSeg.z);
 
-              const gameLoop = () => {
-                if (game.crashed || game.finished) {
-                  return;
-                }
+                        if (p1 && p2 && p3 && p4) {
+                          const dirtGrad = ctx.createLinearGradient(p1.x, p1.y, p3.x, p3.y);
+                          dirtGrad.addColorStop(0, selectedMap.dirtColor);
+                          dirtGrad.addColorStop(0.5, shadeColor(selectedMap.dirtColor, -10));
+                          dirtGrad.addColorStop(1, shadeColor(selectedMap.dirtColor, -20));
+                          ctx.fillStyle = dirtGrad;
+                          ctx.beginPath();
+                          ctx.moveTo(p1.x, p1.y);
+                          ctx.lineTo(p2.x, p2.y);
+                          ctx.lineTo(p3.x, p3.y);
+                          ctx.lineTo(p4.x, p4.y);
+                          ctx.closePath();
+                          ctx.fill();
+                        }
+                      }});
+                    }
+                  }
+                }
 
-                if (game.time < 1.0) {
-                  game.time += 0.016;
-                  
-                  ctx.fillStyle = selectedMap.skyColor;
-                  ctx.fillRect(0, 0, canvas.width, canvas.height);
-                  
-                  ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
-                  ctx.beginPath();
-                  for (let i = 0; i < canvas.width; i += 50) {
-                    const height = 200 + Math.sin(i * 0.01) * 100;
-                    if (i === 0) ctx.moveTo(i, height);
-                    else ctx.lineTo(i, height);
-                  }
-                  ctx.lineTo(canvas.width, canvas.height);
-                  ctx.lineTo(0, canvas.height);
-                  ctx.closePath();
-                  ctx.fill();
-                  
-                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                  ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 50, 300, 100);
-                  ctx.fillStyle = '#FFF';
-                  ctx.font = 'bold 48px Arial';
-                  const countdown = Math.ceil(1.0 - game.time);
-                  ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width/2 - 30, canvas.height/2 + 15);
-                  
-                  animationRef.current = requestAnimationFrame(gameLoop);
-                  return;
-                }
+                // Draw objects
+                game.objects.forEach(obj => {
+                  if (obj.z > game.player.z - 20 && obj.z < game.player.z + 150) {
+                    const p = project3D(obj.x, obj.y, obj.z);
+                    if (!p) return;
+                    renderQueue.push({ depth: p.depth, fn: () => {
+                      if (obj.type === 'rock') {
+                        drawCylinder(obj.x, obj.y, obj.z, obj.radius, obj.radius * 1.2, obj.color || '#666');
+                      } else if (obj.type === 'log') {
+                        drawBox(obj.x, obj.y, obj.z, obj.width || 0.6, obj.height || 0.6, obj.length || 3, obj.color || '#5D4037');
+                      } else if (obj.type === 'jump') {
+                        drawBox(obj.x, obj.y, obj.z, obj.width || 6, obj.height || 1.5, obj.depth || 6, obj.color || '#8B4513');
+                      } else if (obj.type === 'drop') {
+                        drawBox(obj.x, obj.y, obj.z, obj.width || 8, obj.height || 2, obj.depth || 8, obj.color || '#654321');
+                      } else if (obj.type === 'finish') {
+                        drawBox(obj.x, obj.y, obj.z, obj.width || 8, obj.height || 8, obj.depth || 1, '#FFD700');
+                      }
+                    }});
+                  }
+                });
 
-                game.time += 0.016;
-                const keys = keysRef.current;
+                // Sort render queue (far to near)
+                renderQueue.sort((a, b) => b.depth - a.depth);
+                renderQueue.forEach(item => item.fn());
 
-                const accel = 0.3 * bike.speed;
-                const turnSpeed = 0.015 * bike.handling;
-                const jumpPower = 10 * bike.jump;
+                // Draw player (simple marker)
+                ctx.save();
+                ctx.fillStyle = bike ? bike.color : '#fff';
+                ctx.beginPath();
+                ctx.moveTo(canvas.width/2 - 12, canvas.height - 80);
+                ctx.lineTo(canvas.width/2 + 12, canvas.height - 80);
+                ctx.lineTo(canvas.width/2, canvas.height - 50);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
 
-                if (keys['ArrowUp'] || keys['w'] || keys['W']) {
-                  game.player.vz += accel;
-                }
-                if (keys['ArrowDown'] || keys['s'] || keys['S']) {
-                  game.player.vz -= accel * 0.5;
-                }
-                if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-                  game.player.rotVel += turnSpeed;
-                  game.player.vx += 0.08;
-                }
-                if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-                  game.player.rotVel -= turnSpeed;
-                  game.player.vx -= 0.08;
-                }
-                if (keys[' '] && game.player.onGround) {
-                  game.player.vy = jumpPower;
-                  game.player.onGround = false;
-                }
+                // HUD
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(10, 10, 220, 80);
+                ctx.fillStyle = '#FFF';
+                ctx.font = '16px Arial';
+                ctx.fillText('Speed: ' + Math.round(game.player.vz), 20, 35);
+                ctx.fillText('Distance: ' + Math.round(game.player.distance) + 'm', 20, 55);
+                ctx.fillText('Trail: ' + selectedTrail.name, 20, 75);
 
-                                game.player.vz = Math.max(3, Math.min(game.player.vz, 30));
-                game.player.rotY += game.player.rotVel;
-                game.player.rotVel *= 0.90;
-                game.player.vx *= 0.95;
-                game.player.rotVel = Math.max(-0.05, Math.min(game.player.rotVel, 0.05));
+                if (game.crashed) {
+                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                  ctx.fillRect(canvas.width/2 - 220, canvas.height/2 - 80, 440, 160);
+                  ctx.fillStyle = '#FF5555';
+                  ctx.font = 'bold 48px Arial';
+                  ctx.fillText('CRASHED', canvas.width/2 - 120, canvas.height/2 - 10);
+                  ctx.fillStyle = '#FFF';
+                  ctx.font = '20px Arial';
+                  ctx.fillText('Press R to return to trail select', canvas.width/2 - 150, canvas.height/2 + 40);
+                }
 
-                const dt = 0.016;
-                const steerFactor = 0.25; // tuned responsiveness
-                const moveX = Math.sin(game.player.rotY) * game.player.vz * steerFactor * dt + game.player.vx * dt;
-                const moveZ = Math.cos(game.player.rotY) * game.player.vz * dt;
+                if (game.finished) {
+                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                  ctx.fillRect(canvas.width/2 - 220, canvas.height/2 - 80, 440, 160);
+                  ctx.fillStyle = '#7CFC00';
+                  ctx.font = 'bold 48px Arial';
+                  ctx.fillText('FINISHED', canvas.width/2 - 140, canvas.height/2 - 10);
+                  ctx.fillStyle = '#FFF';
+                  ctx.font = '20px Arial';
+                  const timeTaken = ((Date.now() - game.startTime) / 1000).toFixed(2);
+                  ctx.fillText('Time: ' + timeTaken + 's', canvas.width/2 - 40, canvas.height/2 + 30);
+                  ctx.fillText('Press R to return to trail select', canvas.width/2 - 150, canvas.height/2 + 60);
+                }
 
-                // Make the camera (player.rotY) point toward actual movement direction
-                const desiredHeading = Math.atan2(moveX, moveZ);
-                const headingLerp = 0.12; // smoothing
-                let delta = desiredHeading - game.player.rotY;
-                while (delta > Math.PI) delta -= Math.PI * 2;
-                while (delta < -Math.PI) delta += Math.PI * 2;
-                game.player.rotY += delta * headingLerp;
+                if (!game.crashed && !game.finished) {
+                  animationRef.current = requestAnimationFrame(gameLoop);
+                }
+              };
 
-                game.player.x += moveX;
-                game.player.z += moveZ;
-                game.player.vy -= 0.6;
-                game.player.y += game.player.vy * dt;
+              game.startTime = Date.now();
+              animationRef.current = requestAnimationFrame(gameLoop);
 
-                const terrainInfo = getTerrainAt(game.player.x, game.player.z);
-                
-                if (game.player.y <= terrainInfo.height + 2) {
-                  game.player.y = terrainInfo.height + 2;
-                  
-                  if (game.player.vy < -12) {
-                    game.crashed = true;
-                  }
-                  
-                  game.player.vy = 0;
-                  game.player.onGround = true;
-                } else {
-                  game.player.onGround = false;
-                }
+              return () => {
+                cancelAnimationFrame(animationRef.current);
+                window.removeEventListener('keydown', handleKeyDown);
+                window.removeEventListener('keyup', handleKeyUp);
+              };
+            }
+          }, [screen, selectedBike, selectedTrail]);
 
-                if (!terrainInfo.onTrack && game.player.onGround) {
-                  game.crashed = true;
-                }
+          const renderMenu = () => (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
+              <Mountain className="w-24 h-24 text-teal-400 mb-4" />
+              <h1 className="text-5xl font-extrabold mb-8 text-teal-200">Mountain Bike 3D</h1>
+              <button 
+                className="px-8 py-3 bg-teal-500 hover:bg-teal-600 transition duration-150 rounded-lg text-xl font-semibold shadow-lg"
+                onClick={() => setScreen('bike-select')}
+              >
+                Start Game
+              </button>
+            </div>
+          );
 
-                game.objects.forEach(obj => {
-                  const dx = obj.x - game.player.x;
-                  const dz = obj.z - game.player.z;
-                  const dist = Math.sqrt(dx * dx + dz * dz);
-                  
-                  if (obj.type === 'rock' && dist < obj.radius + 1.5) {
-                    if (game.player.onGround) {
-                      game.crashed = true;
-                    }
-                  } else if (obj.type === 'log' && dist < 2) {
-                    if (game.player.onGround) {
-                      game.crashed = true;
-                    }
-                  } else if (obj.type === 'finish' && game.player.z >= obj.z) {
-                    game.finished = true;
-                  }
-                });
+          const renderBikeSelect = () => (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white p-8">
+              <h2 className="text-4xl font-bold mb-8 text-teal-200">Select Your Bike</h2>
+              <div className="grid grid-cols-2 gap-6 w-full max-w-4xl">
+                {bikes.map(bike => (
+                  <div
+                    key={bike.id}
+                    className={`p-6 rounded-xl border-2 cursor-pointer transition duration-150 ${selectedBike === bike.id ? 'border-teal-400 bg-gray-700 shadow-xl' : 'border-gray-700 hover:border-teal-500 bg-gray-800'}`}
+                    onClick={() => setSelectedBike(bike.id)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-2xl font-semibold" style={{ color: bike.color }}>{bike.name}</h3>
+                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: bike.color }} />
+                    </div>
+                    <p className="text-gray-400 mt-2">Stats:</p>
+                    <ul className="text-sm space-y-1 mt-1">
+                      <li>**Speed:** {bike.speed}x</li>
+                      <li>**Handling:** {bike.handling}x</li>
+                      <li>**Jump:** {bike.jump}x</li>
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 flex space-x-4">
+                <button
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition duration-150"
+                  onClick={() => setScreen('menu')}
+                >
+                  Back
+                </button>
+                <button 
+                  className={`px-6 py-2 rounded-lg font-semibold transition duration-150 ${selectedBike ? 'bg-teal-500 hover:bg-teal-600' : 'bg-gray-500 cursor-not-allowed'}`}
+                  onClick={() => selectedBike && setScreen('map-select')}
+                  disabled={!selectedBike}
+                >
+                  Next: Select Map
+                </button>
+              </div>
+            </div>
+          );
 
-                game.player.distance = game.player.z;
-                game.speed = game.player.vz;
+          const renderMapSelect = () => (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white p-8">
+              <h2 className="text-4xl font-bold mb-8 text-teal-200">Select Your Map</h2>
+              <div className="flex space-x-6 w-full max-w-4xl">
+                {maps.map(map => (
+                  <div
+                    key={map.id}
+                    className={`flex-1 p-6 rounded-xl border-2 cursor-pointer transition duration-150 ${selectedMap && selectedMap.id === map.id ? 'border-teal-400 bg-gray-700 shadow-xl' : 'border-gray-700 hover:border-teal-500 bg-gray-800'}`}
+                    onClick={() => setSelectedMap(map)}
+                  >
+                    <h3 className="text-2xl font-semibold mb-2">{map.name}</h3>
+                    <div className="w-full h-24 rounded-lg" style={{ backgroundColor: map.groundColor, backgroundImage: `linear-gradient(to top, ${map.dirtColor}, ${map.groundColor})` }} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 flex space-x-4">
+                <button
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition duration-150"
+                  onClick={() => setScreen('bike-select')}
+                >
+                  Back
+                </button>
+                <button 
+                  className={`px-6 py-2 rounded-lg font-semibold transition duration-150 ${selectedMap ? 'bg-teal-500 hover:bg-teal-600' : 'bg-gray-500 cursor-not-allowed'}`}
+                  onClick={() => selectedMap && setScreen('trail-select')}
+                  disabled={!selectedMap}
+                >
+                  Next: Select Trail
+                </button>
+              </div>
+            </div>
+          );
 
-                ctx.fillStyle = selectedMap.skyColor;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const renderTrailSelect = () => (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white p-8">
+              <h2 className="text-4xl font-bold mb-4 text-teal-200">{selectedMap.name} Trails</h2>
+              <p className="text-gray-400 mb-8">Choose your challenge</p>
+              <div className="grid grid-cols-3 gap-4 w-full max-w-5xl">
+                {selectedMap.trails.map(trail => (
+                  <div
+                    key={trail.id}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition duration-150 ${selectedTrail && selectedTrail.id === trail.id ? 'border-teal-400 bg-gray-700 shadow-xl' : 'border-gray-700 hover:border-teal-500 bg-gray-800'}`}
+                    onClick={() => setSelectedTrail(trail)}
+                  >
+                    <div className="flex items-center space-x-3 mb-1">
+                      <span style={{ color: getDifficultyColor(trail.difficulty) }}>
+                        {getDifficultyIcon(trail.difficulty)}
+                      </span>
+                      <h3 className="text-xl font-semibold">{trail.name}</h3>
+                    </div>
+                    <p className="text-sm text-gray-400">Length: {(trail.length / 1000).toFixed(1)} km</p>
+                    <p className="text-sm text-gray-400">Features: {trail.features}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 flex space-x-4">
+                <button
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition duration-150"
+                  onClick={() => { setSelectedMap(null); setScreen('map-select'); }}
+                >
+                  Back
+                </button>
+                <button 
+                  className={`px-6 py-2 rounded-lg font-semibold transition duration-150 ${selectedTrail ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 cursor-not-allowed'}`}
+                  onClick={() => selectedTrail && setScreen('playing')}
+                  disabled={!selectedTrail}
+                >
+                  Ride!
+                </button>
+              </div>
+            </div>
+          );
 
-                ctx.fillStyle = shadeColor(selectedMap.groundColor, -40);
-                ctx.globalAlpha = 0.6;
-                ctx.beginPath();
-                for (let i = 0; i < canvas.width; i += 30) {
-                  const height = 150 + Math.sin(i * 0.008 + game.player.z * 0.01) * 80;
-                  if (i === 0) ctx.moveTo(i, height);
-                  else ctx.lineTo(i, height);
-                }
-                ctx.lineTo(canvas.width, canvas.height);
-                ctx.lineTo(0, canvas.height);
-                ctx.closePath();
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
+          const renderPlaying = () => (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-900">
+              <canvas ref={canvasRef} className="border-4 border-gray-800 shadow-2xl" />
+            </div>
+          );
 
-                ctx.fillStyle = shadeColor(selectedMap.groundColor, -20);
-                ctx.globalAlpha = 0.8;
-                ctx.beginPath();
-                for (let i = 0; i < canvas.width; i += 40) {
-                  const height = 250 + Math.sin(i * 0.012 + game.player.z * 0.015) * 60;
-                  if (i === 0) ctx.moveTo(i, height);
-                  else ctx.lineTo(i, height);
-                }
-                ctx.lineTo(canvas.width, canvas.height);
-                ctx.lineTo(0, canvas.height);
-                ctx.closePath();
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
+          switch (screen) {
+            case 'bike-select':
+              return renderBikeSelect();
+            case 'map-select':
+              return renderMapSelect();
+            case 'trail-select':
+              return renderTrailSelect();
+            case 'playing':
+              return renderPlaying();
+            case 'menu':
+            default:
+              return renderMenu();
+          }
+        };
 
-                const renderQueue = [];
-
-                game.mountainSides.forEach(side => {
-                  if (side.z > game.player.z - 20 && side.z < game.player.z + 150) {
-                    const p = project3D(side.x, side.y, side.z);
-                    if (p) {
-                      renderQueue.push({ depth: p.depth, fn: () => {
-                        const terrainColor = selectedMap.groundColor;
-                        ctx.fillStyle = shadeColor(terrainColor, -10 - (Math.abs(side.x) * 2));
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, side.size * p.scale, 0, Math.PI * 2);
-                        ctx.fill();
-                      }});
-                    }
-                  }
-                });
-
-                game.trees.forEach(tree => {
-                  if (tree.z > game.player.z - 20 && tree.z < game.player.z + 150) {
-                    const p = project3D(tree.x, tree.y, tree.z);
-                    if (p) {
-                      renderQueue.push({ depth: p.depth, fn: () => {
-                        if (tree.isBush) {
-                          drawCylinder(tree.x, tree.y, tree.z, tree.radius, tree.height, '#2d5016');
-                        } else {
-                          const trunkColor = '#3d2817';
-                          drawCylinder(tree.x, tree.y, tree.z, tree.radius * 0.6, tree.height * 0.3, trunkColor);
-                          
-                          const foliageColor = '#2d5016';
-                          const layers = 3;
-                          for (let i = 0; i < layers; i++) {
-                            const layerHeight = tree.height * 0.3 + (i * tree.height * 0.23);
-                            const layerRadius = tree.radius * (1.8 - i * 0.3);
-                            drawCylinder(tree.x, tree.y + layerHeight, tree.z, layerRadius, tree.height * 0.23, 
-                                        shadeColor(foliageColor, i * 10));
-                          }
-                        }
-                      }});
-                    }
-                  }
-                });
-
-                for (let i = 0; i < game.terrain.length - 1; i++) {
-                  const seg = game.terrain[i];
-                  const nextSeg = game.terrain[i + 1];
-
-                  if (seg.z > game.player.z - 10 && seg.z < game.player.z + 150) {
-                    const p = project3D(seg.centerX, seg.height, seg.z);
-                    if (p) {
-                      renderQueue.push({ depth: p.depth, fn: () => {
-                        const p1 = project3D(seg.leftEdge, seg.height, seg.z);
-                        const p2 = project3D(seg.rightEdge, seg.height, seg.z);
-                        const p3 = project3D(nextSeg.rightEdge, nextSeg.height, nextSeg.z);
-                        const p4 = project3D(nextSeg.leftEdge, nextSeg.height, nextSeg.z);
-
-                        if (p1 && p2 && p3 && p4) {
-                          const dirtGrad = ctx.createLinearGradient(p1.x, p1.y, p3.x, p3.y);
-                          dirtGrad.addColorStop(0, selectedMap.dirtColor);
-                          dirtGrad.addColorStop(0.5, shadeColor(selectedMap.dirtColor, -10));
-                          dirtGrad.addColorStop(1, shadeColor(selectedMap.dirtColor, -20));
-                          ctx.fillStyle = dirtGrad;
-                          ctx.beginPath();
-                          ctx.moveTo(p1.x, p1.y);
-                          ctx.lineTo(p2.x, p2.y);
-                          ctx.lineTo(p3.x, p3.y);
-                          ctx.lineTo(p4.x, p4.y);
-                          ctx.closePath();
-                          ctx.fill();
-                        }
-                      }});
-                    }
-                  }
-                }
-
-                // Draw objects
-                game.objects.forEach(obj => {
-                  if (obj.z > game.player.z - 20 && obj.z < game.player.z + 150) {
-                    const p = project3D(obj.x, obj.y, obj.z);
-                    if (!p) return;
-                    renderQueue.push({ depth: p.depth, fn: () => {
-                      if (obj.type === 'rock') {
-                        drawCylinder(obj.x, obj.y, obj.z, obj.radius, obj.radius * 1.2, obj.color || '#666');
-                      } else if (obj.type === 'log') {
-                        drawBox(obj.x, obj.y, obj.z, obj.width || 0.6, obj.height || 0.6, obj.length || 3, obj.color || '#5D4037');
-                      } else if (obj.type === 'jump') {
-                        drawBox(obj.x, obj.y, obj.z, obj.width || 6, obj.height || 1.5, obj.depth || 6, obj.color || '#8B4513');
-                      } else if (obj.type === 'drop') {
-                        drawBox(obj.x, obj.y, obj.z, obj.width || 8, obj.height || 2, obj.depth || 8, obj.color || '#654321');
-                      } else if (obj.type === 'finish') {
-                        drawBox(obj.x, obj.y, obj.z, obj.width || 8, obj.height || 8, obj.depth || 1, '#FFD700');
-                      }
-                    }});
-                  }
-                });
-
-                // Sort render queue (far to near)
-                renderQueue.sort((a, b) => b.depth - a.depth);
-                renderQueue.forEach(item => item.fn());
-
-                // Draw player (simple marker)
-                ctx.save();
-                ctx.fillStyle = bike ? bike.color : '#fff';
-                ctx.beginPath();
-                ctx.moveTo(canvas.width/2 - 12, canvas.height - 80);
-                ctx.lineTo(canvas.width/2 + 12, canvas.height - 80);
-                ctx.lineTo(canvas.width/2, canvas.height - 50);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-
-                // HUD
-                ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                ctx.fillRect(10, 10, 220, 80);
-                ctx.fillStyle = '#FFF';
-                ctx.font = '16px Arial';
-                ctx.fillText('Speed: ' + Math.round(game.player.vz), 20, 35);
-                ctx.fillText('Distance: ' + Math.round(game.player.distance) + 'm', 20, 55);
-                ctx.fillText('Trail: ' + selectedTrail.name, 20, 75);
-
-                if (game.crashed) {
-                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                  ctx.fillRect(canvas.width/2 - 220, canvas.height/2 - 80, 440, 160);
-                  ctx.fillStyle = '#FF5555';
-                  ctx.font = 'bold 48px Arial';
-                  ctx.fillText('CRASHED', canvas.width/2 - 120, canvas.height/2 - 10);
-                  ctx.fillStyle = '#FFF';
-                  ctx.font = '20px Arial';
-                  ctx.fillText('Press R to return to trail select', canvas.width/2 - 150, canvas.height/2 + 40);
-                }
-
-                if (game.finished) {
-                  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                  ctx.fillRect(canvas.width/2 - 220, canvas.height/2 - 80, 440, 160);
-                  ctx.fillStyle = '#7CFC00';
-                  ctx.font = 'bold 48px Arial';
-                  ctx.fillText('FINISHED', canvas.width/2 - 140, canvas.height/2 - 10);
-                  ctx.fillStyle = '#FFF';
-                  ctx.font = '20px Arial';
-                  const timeTaken = ((Date.now() - game.startTime) / 1000).toFixed(2);
-                  ctx.fillText('Time: ' + timeTaken + 's', canvas.width/2 - 40, canvas.height/2 + 30);
-                  ctx.fillText('Press R to return to trail select', canvas.width/2 - 150, canvas.height/2 + 60);
-                }
-
-                if (!game.crashed && !game.finished) {
-                  animationRef.current = requestAnimationFrame(gameLoop);
-                }
-              };
-
-              // Start
-              game.startTime = Date.now();
-              animationRef.current = requestAnimationFrame(gameLoop);
-
-              // Cleanup on unmount or when leaving playing screen
-              return () => {
-                window.removeEventListener('keydown', handleKeyDown);
-                window.removeEventListener('keyup', handleKeyUp);
-                if (animationRef.current) cancelAnimationFrame(animationRef.current);
-              };
-            }
-          }, [screen, selectedBike, selectedMap, selectedTrail]);
-
-          // Basic UI rendering for menu, selections, and canvas
-          return (
-            <div className="w-screen h-screen bg-gray-900 text-white">
-              {screen === 'menu' && (
-                <div className="p-8">
-                  <h1 className="text-4xl font-bold">Mountain Bike 3D</h1>
-                  <div className="mt-6">
-                    <button className="px-4 py-2 bg-blue-600 rounded" onClick={() => setScreen('bike-select')}>Play</button>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'bike-select' && (
-                <div className="p-6">
-                  <h2 className="text-2xl">Choose a Bike</h2>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    {bikes.map(b => (
-                      <div key={b.id} className="p-4 bg-gray-800 rounded">
-                        <h3 className="font-bold">{b.name}</h3>
-                        <p>Speed: {b.speed}</p>
-                        <button className="mt-2 px-3 py-1 bg-green-600 rounded" onClick={() => { setSelectedBike(b.id); setScreen('map-select'); }}>Select</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {screen === 'map-select' && (
-                <div className="p-6">
-                  <h2 className="text-2xl">Choose a Map</h2>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    {maps.map(m => (
-                      <div key={m.id} className="p-4 bg-gray-800 rounded">
-                        <h3 className="font-bold">{m.name}</h3>
-                        <button className="mt-2 px-3 py-1 bg-green-600 rounded" onClick={() => { setSelectedMap(m); setScreen('trail-select'); }}>Select</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {screen === 'trail-select' && selectedMap && (
-                <div className="p-6">
-                  <h2 className="text-2xl">Choose a Trail - {selectedMap.name}</h2>
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    {selectedMap.trails.map(t => (
-                      <div key={t.id} className="p-4 bg-gray-800 rounded">
-                        <h3 className="font-bold">{t.name}</h3>
-                        <p>Difficulty: {t.difficulty}</p>
-                        <button className="mt-2 px-3 py-1 bg-green-600 rounded" onClick={() => { setSelectedTrail(t); setScreen('playing'); }}>Start</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {screen === 'playing' && (
-                <div className="w-full h-full">
-                  <canvas ref={canvasRef} className="w-full h-full" />
-                </div>
-              )}
-            </div>
-          );
-        };
-
-        ReactDOM.createRoot(document.getElementById('root')).render(<MountainBikeGame />);
-    </script>
-  </body>
+        ReactDOM.render(<MountainBikeGame />, document.getElementById('root'));
+    </script>
+</body>
 </html>
